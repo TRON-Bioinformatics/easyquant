@@ -23,9 +23,10 @@ read pairs that span the breakpoint (spanning pairs).
 
 ## Dependencies
 
- - Python
- - STARR (for read mapping)
-
+ - Python 2.7.15
+ - STARR
+ - samtools (>= 1.9)
+ 
 ## Installation
 
 ```
@@ -36,7 +37,10 @@ git clone git@gitlab.rlp.net:tron/easyquant.git
 
 
 ```
-python <script> <args>
+python easy_quant.py \
+  -i rna-seq_R1.fq.gz rna-seq_R1.fq.gz \
+  -f sequence_table.tsv \
+  -o output_folder
 ```
 
 
@@ -57,6 +61,10 @@ Example format of the input table:
 
 
 #### Fastq files
+
+Paired fastq files from the same sample should have an identical prefix in file 
+name and contain `R1` or `R2` for the forward and reverse read pair, 
+respectively. 
 
 #### Config file
 
