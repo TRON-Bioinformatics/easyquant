@@ -8,28 +8,24 @@ import time
 import csv
 import math
 from argparse import ArgumentParser
-import misc.io_methods as IOMethods
 from misc.config import Config
-from misc.samples import Samples
-import misc.queue as Queueing
-
+import subprocess
 
 class CustomTranscriptome(object):
     
-    def __init__(self, cfg, input, fusions_table, working_dir, partitions):
+    def __init__(self, cfg, input, fusions_table, working_dir):
         
-        csv.field_size_limit(999999999)
         self.cfg = cfg
         self.input = []
         for i in input:
             self.input.append(i.rstrip("/"))
         self.fusions_table = fusions_table
         self.working_dir = working_dir.rstrip("/")
-        IOMethods.create_folder(self.working_dir)
-        self.samples = Samples(os.path.join(self.working_dir,"samples.csv"))
+        if not os.path.exists(self.working_dir):
+            print "INFO: Creating folder: " + self.working_dir
+            os.makedirs(self.working_dir)
         self.fasta = os.path.join(self.working_dir,"context.fa")
         self.bed = os.path.join(self.working_dir,"context.bed")
-        self.partitions = partitions
         self.csv_to_fasta()
         self.generate_bed()
         self.build_index()
@@ -58,13 +54,15 @@ class CustomTranscriptome(object):
             for line in inf:
                 if not line.rstrip().startswith(">"):
                     genome_size += len(line.rstrip())
-        print "Custom Genome Size: " + str(genome_size) + "bp"
+        print "INFO: Custom Genome Size: " + str(genome_size) + "bp"
         return genome_size
 
 ### FGID;Fusion_Gene;Breakpoint1;Breakpoint2;FTID;context_sequence_id;type;exon_boundary1;exon_boundary2;exon_boundary;bp1_frame;bp2_frame;frame;wt1_expression;wt2_expression;context_sequence;context_sequence_bp;wt1_context_sequence;wt1_context_sequence_bp;wt2_context_sequence;wt2_context_sequence_bp;neo_peptide_sequence;neo_peptide_sequence_bp;transcript_sequence ###
 ### 
     def csv_to_fasta(self):
+        
         outf_context = open(self.fasta,"w")
+        
         with open(self.fusions_table) as csvfile:
             inf = csv.reader(csvfile, delimiter=';')
             header = inf.next()
@@ -72,16 +70,17 @@ class CustomTranscriptome(object):
             col = {}
             for i,colname in enumerate(header):
                 col[colname] = i
+                
             for c,row in enumerate(inf):
+                
                 name = row[col["name"]]
                 sequence = row[col["sequence"]]
                 position = row[col["position"]]
-                # context_id = row[col["context_sequence_id"]]
-                # context_seq = row[col["context_sequence"]].upper()
                 
                 outf_context.write(">" + name + "\n")
                 for i in range(0, len(sequence), 60):
                     outf_context.write(sequence[i:i+60]+"\n")
+                    
         outf_context.close()
 
     def generate_bed(self):
@@ -105,7 +104,7 @@ class CustomTranscriptome(object):
                 sequence = row[col["sequence"]]
                 position = row[col["position"]]
                 
-                name_pos = name + pos
+                name_pos = name + "_pos_" + position
                 
                 # genes = fgid.split("_", 1)
                 # gene1 = genes[0]
@@ -125,16 +124,20 @@ class CustomTranscriptome(object):
                 end1 = location
                 end2 = len(sequence)
 
-                outf_context.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (name, start, end1, name_pos + "_A", "0", "+"))
-                outf_context.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (name, end1, end2,  name_pos + "_B", "0", "+"))
+                outf_context.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (name, start, end1, name_pos + "_A", "0", "+"))
+                outf_context.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (name, end1, end2,  name_pos + "_B", "0", "+"))
 
         outf_context.close()
 
     def build_index(self):
+        '''This function builds an index on the input sequences for mapping with STAR.'''
+        
         star_idx_path = os.path.join(self.working_dir,"STAR_idx")
 
         for folder in [star_idx_path]:
-            IOMethods.create_folder(folder)
+            if not os.path.exists(folder):
+                print "INFO: Creating folder: " + folder
+                os.makedirs(folder)            
 
         shell_script = os.path.join(self.working_dir,"generate_index.sh")
         out_shell = open(shell_script,"w")
@@ -149,13 +152,16 @@ class CustomTranscriptome(object):
         out_shell.close()
 
         if not os.path.exists(os.path.join(star_idx_path,"Genome")):
-            self.submit_job_nonqueue(cmd_star,star_idx_path)
+            self.execute_cmd(cmd_star)
 
     def run(self):
         '''This function starts processing of the samples.'''
+        
         fastqs = self.get_fastq_files(self.input)
         file_array = sorted(fastqs)
-#        print file_array
+        
+        # print "INFO: Fastq files:" + file_array
+        
         left = []
         right = []
         for i in range(len(file_array)):
@@ -169,11 +175,13 @@ class CustomTranscriptome(object):
                 left.append(file_array[i])
             elif "R2" in file_array_split[1] or skewer_split == "pair2":
                 right.append(file_array[i])
+                
         for i,ele in enumerate(left):
 
             if len(right) != 0:
-                print "Sample 1: " + left[i]
-                print "Sample 2: " + right[i]
+                print "INFO: Start pipeline with:"
+                print "INFO:    Sample 1: " + left[i]
+                print "INFO:    Sample 2: " + right[i]
                 self.execute_pipeline(left[i],right[i])
 
     def execute_pipeline(self,file_1,file_2):
@@ -183,55 +191,52 @@ class CustomTranscriptome(object):
         star_path = os.path.join(self.working_dir,"star")
 
         for folder in [star_path]:
-            IOMethods.create_folder(folder)
-        shell_script = os.path.join(self.working_dir,"requant.sh")
-        out_shell = open(shell_script,"w")
+            if not os.path.exists(folder):
+                print "INFO: Creating folder: " + folder
+                os.makedirs(folder)
+            
+        shell_script = os.path.join(self.working_dir, "requant.sh")
+        
+        # start to write shell script to execute mapping cmd
+        with open(shell_script, "w") as out_shell:
 
-        bam_file = os.path.join(star_path,"Aligned.sortedByCoord.out.bam")
+            bam_file = os.path.join(star_path,"Aligned.sortedByCoord.out.bam")
+    
+            cmd_star = "%s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn %s %s --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_genome_path, file_1, file_2, self.cfg.get('commands', 'samtools_cmd'), bam_file)
+    
+            cmd_class = "%s -i %s -b %s -o %s" % (self.cfg.get('commands', 'classification_cmd'), bam_file, os.path.join(self.working_dir, self.bed), os.path.join(self.working_dir, "Classification.csv"))
+    
+            out_shell.write("#!/bin/sh\n\n")
+            out_shell.write("fq1="+file_1+"\n")
+            if file_2:
+                out_shell.write("fq2="+file_2+"\n")
+            out_shell.write("working_dir="+self.working_dir+"\n")
+            out_shell.write("echo \"Starting pipeline...\"\n")
+            if file_2:
+                out_shell.write("echo \"Starting STAR\"\n")
+                out_shell.write(cmd_star+"\n")
+                out_shell.write("echo \"Starting Classification\"\n")
+                out_shell.write(cmd_class+"\n")
+            out_shell.write("echo \"Processing done!\"\n")
 
-        cmd_star = "%s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn %s %s --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_genome_path, file_1, file_2, self.cfg.get('commands', 'samtools_cmd'), bam_file)
+        # if not os.path.exists(os.path.join(star_path, "Log.final.out")):
+        #     self.execute_cmd(cmd_star, star_path)
+        # 
+        # if not os.path.exists(os.path.join(self.working_dir, "Classification.csv")):
+        #     self.execute_cmd(cmd_class, self.working_dir)
+        # 
+        # print "INFO: Processing complete for " + self.working_dir
 
-        cmd_class = "%s -i %s -b %s -o %s" % (self.cfg.get('commands', 'classification_cmd'), bam_file, os.path.join(self.working_dir, self.bed), os.path.join(self.working_dir, "Classification.csv"))
-
-        out_shell.write("#!/bin/sh\n\n")
-        out_shell.write("fq1="+file_1+"\n")
-        if file_2:
-            out_shell.write("fq2="+file_2+"\n")
-        out_shell.write("working_dir="+self.working_dir+"\n")
-        out_shell.write("echo \"Starting pipeline...\"\n")
-        if file_2:
-            out_shell.write("echo \"Starting STAR\"\n")
-            out_shell.write(cmd_star+"\n")
-            out_shell.write("echo \"Starting Classification\"\n")
-            out_shell.write(cmd_class+"\n")
-        out_shell.write("echo \"Processing done!\"\n")
-        out_shell.close()
-
-        if not os.path.exists(os.path.join(star_path, "Log.final.out")):
-            self.submit_job_nonqueue(cmd_star, star_path)
-
-        if not os.path.exists(os.path.join(self.working_dir, "Classification.csv")):
-            self.submit_job_nonqueue(cmd_class, self.working_dir)
-
-        print "Processing complete for " + self.working_dir
-
-    def submit_job_nonqueue(self,cmd,output_results_folder):
-        Queueing._submit_nonqueue(cmd,output_results_folder)
-
-    def submit_job(self,module,sample_id,cmd,cores,mem_usage,output_results_folder,dependencies):
-        '''This function submits a job with the corresponding resources to slurm.'''
-        q = Queue()
-        job_name = "-".join([module,sample_id])
-        already_running = self.get_jobs_with_name(job_name)
-        if len(already_running) == 0:
-
-            q.submit_slurm(job_name,cmd,cores,mem_usage,output_results_folder,dependencies,self.partitions)
-            time.sleep(3)
-        else:
-            print job_name + " already running!"
-
-        return job_name
-       
+    def execute_cmd(self, cmd, working_dir = "."):
+        
+        print(cmd)
+        p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE, cwd = working_dir, shell = True)
+        (stdoutdata, stderrdata) = p.communicate()
+        r = p.returncode
+        if r != 0:
+            print("Error: Command \"{}\" returned non-zero exit status".format(cmd))
+            print(stderrdata)
+            sys.exit(1)
 
 def main():
     parser = ArgumentParser(description='Processing of demultiplexed FASTQs')
@@ -244,12 +249,12 @@ def main():
     cfg = Config(os.path.join(os.path.dirname(os.path.realpath(__file__)),'config.ini'))
 
     
-    ct = CustomTranscriptome(cfg, args.input, args.fusions, args.output_folder, args.partitions)
+    ct = CustomTranscriptome(cfg, args.input, args.fusions, args.output_folder)
     ct.run()
     
     script_call = "python " + os.path.realpath(__file__) + " " + " ".join(sys.argv[1:])
     
-    outf = open(os.path.join(args.output_folder,"custom_transcriptome.sh"),"w")
+    outf = open(os.path.join(args.output_folder,"run_command.sh"),"w")
     outf.write("#!/bin/sh\n\n")
     outf.write(script_call)
     outf.close()
