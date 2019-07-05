@@ -15,7 +15,9 @@ import misc.queue as Queueing
 
 
 class CustomTranscriptome(object):
-    def __init__(self,cfg,input,fusions_table,working_dir,partitions):
+    
+    def __init__(self, cfg, input, fusions_table, working_dir, partitions):
+        
         csv.field_size_limit(999999999)
         self.cfg = cfg
         self.input = []
@@ -33,7 +35,7 @@ class CustomTranscriptome(object):
         self.build_index()
 
 
-    def get_fastq_files(self,paths):
+    def get_fastq_files(self, paths):
         '''This function returns a list of fastq files for the given list of paths.'''
         fastqs = []
         for path in paths:
@@ -60,7 +62,7 @@ class CustomTranscriptome(object):
         return genome_size
 
 ### FGID;Fusion_Gene;Breakpoint1;Breakpoint2;FTID;context_sequence_id;type;exon_boundary1;exon_boundary2;exon_boundary;bp1_frame;bp2_frame;frame;wt1_expression;wt2_expression;context_sequence;context_sequence_bp;wt1_context_sequence;wt1_context_sequence_bp;wt2_context_sequence;wt2_context_sequence_bp;neo_peptide_sequence;neo_peptide_sequence_bp;transcript_sequence ###
-
+### 
     def csv_to_fasta(self):
         outf_context = open(self.fasta,"w")
         with open(self.fusions_table) as csvfile:
@@ -71,57 +73,62 @@ class CustomTranscriptome(object):
             for i,colname in enumerate(header):
                 col[colname] = i
             for c,row in enumerate(inf):
-                ftid = row[col["FTID"]]
-                fgid = row[col["FGID"]]
-                context_id = row[col["context_sequence_id"]]
-                context_seq = row[col["context_sequence"]].upper()
-
-                outf_context.write(">" + context_id + "\n")
-                for i in range(0,len(context_seq),60):
-                    outf_context.write(context_seq[i:i+60]+"\n")
+                name = row[col["name"]]
+                sequence = row[col["sequence"]]
+                position = row[col["position"]]
+                # context_id = row[col["context_sequence_id"]]
+                # context_seq = row[col["context_sequence"]].upper()
+                
+                outf_context.write(">" + name + "\n")
+                for i in range(0, len(sequence), 60):
+                    outf_context.write(sequence[i:i+60]+"\n")
         outf_context.close()
 
     def generate_bed(self):
+        
         outf_context = open(self.bed,"w")
-        outf_context_vis = open(self.bed+".visualisation.bed","w")
+        
         with open(self.fusions_table) as csvfile:
+            
             inf = csv.reader(csvfile, delimiter=';')
             header = inf.next()
             col = {}
+            
+            # read column names as dictionary to column numbers
             for i,colname in enumerate(header):
                 col[colname] = i
-
+            
+            # iterate over rows
             for c,row in enumerate(inf):
-                ftid = row[col["FTID"]]
-                fgid = row[col["FGID"]]
-                context_id = row[col["context_sequence_id"]]
-                context_sequence = row[col["context_sequence"]]
-
-                genes = fgid.split("_", 1)
-                gene1 = genes[0]
-                gene2 = genes[1]
                 
-                rel_bp = row[col["context_sequence_bp"]]
-
+                name = row[col["name"]]
+                sequence = row[col["sequence"]]
+                position = row[col["position"]]
+                
+                name_pos = name + pos
+                
+                # genes = fgid.split("_", 1)
+                # gene1 = genes[0]
+                # gene2 = genes[1]
+                # 
+                # rel_bp = row[col["context_sequence_bp"]]
+                
+                # use 0 as position, if not given
                 location = 0
-                if rel_bp != "NA":
-                    location = int(rel_bp)
+                if position != "NA":
+                    location = int(position)
 
                 strand1 = "+"
                 strand2 = "+"
 
                 start = 0
                 end1 = location
-                end2 = len(context_sequence)
+                end2 = len(sequence)
 
-                outf_context.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (context_id,start,end1,gene1,"",strand1,start,end1,"0",1,end1,start))
-                outf_context.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (context_id,end1,end2,gene2,"",strand2,end1,end2,"0",1,end2-end1,end1))
-                
-                outf_context_vis.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (context_id,start,(end1-5),gene1,"",strand1,start,(end1-5),"0",1,(end1-5),start))
-                outf_context_vis.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (context_id,(end1+5),end2,gene2,"",strand2,(end1+5),end2,"0",1,end2-(end1+5),(end1+5)))
+                outf_context.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (name, start, end1, name_pos + "_A", "0", "+"))
+                outf_context.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (name, end1, end2,  name_pos + "_B", "0", "+"))
 
         outf_context.close()
-        outf_context_vis.close()
 
     def build_index(self):
         star_idx_path = os.path.join(self.working_dir,"STAR_idx")
@@ -231,20 +238,17 @@ def main():
 
     parser.add_argument('-i', '--input', dest='input', nargs='+', help='Specify the fastq folder(s) or fastq file(s) to process.',required=True)
     parser.add_argument('-f', '--fusions', dest='fusions', help='Specify the reference fusions table to base index on.',required=True)
-#    parser.add_argument('-m','--min-read-length-perc',dest='min_read_length_perc',type=float,help='Specify minimum read length percentage',default=0.75)
-#    parser.add_argument('--no-qc', dest='no_qc', action='store_true', help='Specify if QC shall be skipped on samples')
     parser.add_argument('-o', '--output-folder', dest='output_folder', help='Specify the folder to save the results into.',required=True)
-
-    parser.add_argument('-p','--partitions',dest='partitions',help='Comma-separated list of partitions to use for queueing.',default='Compute')
     args = parser.parse_args()
 
     cfg = Config(os.path.join(os.path.dirname(os.path.realpath(__file__)),'config.ini'))
 
+    
+    ct = CustomTranscriptome(cfg, args.input, args.fusions, args.output_folder, args.partitions)
+    ct.run()
+    
     script_call = "python " + os.path.realpath(__file__) + " " + " ".join(sys.argv[1:])
     
-    ct = CustomTranscriptome(cfg,args.input,args.fusions,args.output_folder,args.partitions)
-    ct.run()
-
     outf = open(os.path.join(args.output_folder,"custom_transcriptome.sh"),"w")
     outf.write("#!/bin/sh\n\n")
     outf.write(script_call)
