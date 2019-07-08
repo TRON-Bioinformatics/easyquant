@@ -114,12 +114,8 @@ class Requantification(object):
             if not read.query_name in read_buffer:
                 read_buffer[read.query_name] = []
             read_buffer[read.query_name].append(read)
-            # reference name conventions may change in the near future, but the tail must be
-            # "*_breakpointPosition_ft" for the fusion transcript and "*_wt{1,2}" for the wt background
-#            if read.reference_name.endswith("ft"):
             last_reference = read.reference_name
-#            else:
-#                last_reference = "_".join(read.reference_name.split("_")[:-1])
+
 
         # process the last read_buffer
         self.quantify_read_groups(read_buffer, last_reference)
@@ -137,8 +133,7 @@ class Requantification(object):
 
         out_file_sep = ";"
         header_string = out_file_sep.join(
-            ["fgid",
-             "bp", "a", "b", "junc", "span", "anch"])
+            ["name", "position", "a", "b", "junc", "span", "anch"])
         # write counts and normalized counts
         # for normalization, breakpoint and anchor must not be converted: list positions 0, 5, 10, 15
         no_norm = {0, 5, 6, 11, 12, 17}
@@ -154,29 +149,6 @@ class Requantification(object):
                 self.fusion_seq_dict[key] = [read_count if i in no_norm else self.normalize_counts_cpm(read_count) for i, read_count in enumerate(self.fusion_seq_dict[key])]
                 #self.fusion_seq_dict[key] = map(self.normalize_counts_cpm, self.fusion_seq_dict[key])
                 out_norm.write("{}\n".format(out_file_sep.join(map(str, self.fusion_seq_dict[key]))))
-        # write normalized counts
-#        with
-#            out_file2.write("{}\n".format(header_string))
-#            for key in self.fusion_seq_dict:
-                # write only those putative fusions, where not all counts are 0
-                #if sum(self.fusion_seq_dict[key][1:]) > 0:
-                #self.fusion_seq_dict[key].insert(0, key.rsplit("_", 2)[0])
-#                self.fusion_seq_dict[key] = map(self.normalize_counts_cpm, self.fusion_seq_dict[key])
-#                self.fusion_seq_dict[key].insert(0, key)
-#                out_file.write("{}\n".format(out_file_sep.join(map(str, self.fusion_seq_dict[key]))))
-
-#        out_file_sep = ";"
-#        with open(self.output, "w") as out_file:
-#            out_file.write(out_file_sep.join(["ftid_plus", "Type", "Reads_Gene_A", "Reads_Gene_B", "Junction_Reads", "Spanning_Pairs", "Longest_Anchor"]) + "\n")
-#            for key in self.fusion_seq_dict:
-#                # write only those putative fusions, where not all counts are 0
-#                #if sum(self.fusion_seq_dict[key][1:]) > 0:
-#                #ABCA7_19:1059141:+_ENST00000532194_DNHD1_11:6546666:+_ENST00000533649_9dd39c73a904776e_100_ft
-#                ftid_p = key.rsplit("_", 2)[0]
-#                (_, junc_ft, span_ft, anch_ft, junc_wt1, span_wt1, anch_wt1, junc_wt2, span_wt2, anch_wt2) = self.fusion_seq_dict[key]
-#                out_file.write(out_file_sep.join(map(str, [ftid_p, "ft", "NA", "NA", junc_ft, span_ft, anch_ft])) + "\n")
-#                out_file.write(out_file_sep.join(map(str, [ftid_p, "wt1", "NA", "NA", junc_wt1, span_wt1, anch_wt1])) + "\n")
-#                out_file.write(out_file_sep.join(map(str, [ftid_p, "wt2", "NA", "NA", junc_wt2, span_wt2, anch_wt2])) + "\n")
 
 def main():
     """Parse command line arguments and start script"""
