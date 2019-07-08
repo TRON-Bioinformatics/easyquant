@@ -134,6 +134,7 @@ class CustomTranscriptome(object):
         
         star_idx_path = os.path.join(self.working_dir,"STAR_idx")
 
+
         for folder in [star_idx_path]:
             if not os.path.exists(folder):
                 print "INFO: Creating folder: " + folder
@@ -141,7 +142,11 @@ class CustomTranscriptome(object):
 
         shell_script = os.path.join(self.working_dir,"generate_index.sh")
         out_shell = open(shell_script,"w")
-        sa_index_nbases = int(math.log(self.calc_genome_size()) / 2 - 1)
+        
+        # calculate length of SA pre-indexing string.
+        # according to STAR parameter --genomeSAindexNbases 
+        # If genome size is to small, mapping is very slow, therfore use at least 4
+        sa_index_nbases = min(14, max(4, int(math.log(self.calc_genome_size()) / 2 - 1)))
         cmd_star = "%s --runMode genomeGenerate --runThreadN 12 --genomeSAindexNbases %s --genomeDir %s --genomeFastaFiles %s" % (self.cfg.get('commands','star_cmd'),sa_index_nbases,star_idx_path,self.fasta)
 
         out_shell.write("#!/bin/sh\n\n")
@@ -160,7 +165,7 @@ class CustomTranscriptome(object):
         fastqs = self.get_fastq_files(self.input)
         file_array = sorted(fastqs)
         
-        # print "INFO: Fastq files:" + file_array
+        print "INFO: Fastq files:", file_array
         
         left = []
         right = []
@@ -185,16 +190,19 @@ class CustomTranscriptome(object):
                 self.execute_pipeline(left[i],right[i])
 
     def execute_pipeline(self,file_1,file_2):
-
+        
+        print "INFO: Execute pipeline on", file_1, file_2
+        
         star_genome_path = os.path.join(self.working_dir,"STAR_idx")
 
         star_path = os.path.join(self.working_dir,"star")
-
-        for folder in [star_path]:
-            if not os.path.exists(folder):
-                print "INFO: Creating folder: " + folder
-                os.makedirs(folder)
-            
+        
+        # create folder
+        if not os.path.exists(star_path):
+            print "INFO: Creating folder: " + star_path
+            os.makedirs(star_path)
+        
+        # define bash script in working directory    
         shell_script = os.path.join(self.working_dir, "requant.sh")
         
         # start to write shell script to execute mapping cmd
@@ -202,7 +210,7 @@ class CustomTranscriptome(object):
 
             bam_file = os.path.join(star_path,"Aligned.sortedByCoord.out.bam")
     
-            cmd_star = "%s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn %s %s --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_genome_path, file_1, file_2, self.cfg.get('commands', 'samtools_cmd'), bam_file)
+            cmd_star = "%s --outFileNamePrefix %s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn ${fq1} ${fq2} --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/", star_genome_path, self.cfg.get('commands', 'samtools_cmd'), bam_file)
     
             cmd_class = "%s -i %s -b %s -o %s" % (self.cfg.get('commands', 'classification_cmd'), bam_file, os.path.join(self.working_dir, self.bed), os.path.join(self.working_dir, "Classification.csv"))
     
