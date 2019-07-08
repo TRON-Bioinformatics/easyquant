@@ -1,6 +1,6 @@
 # easyquant
 
-*Quantification of reads at defined positions in custom input sequences.*
+*Quantification of reads at defined positions to varify custom input sequences.*
 
 
 Given a gene fusion or splicing junction of interest, this tool can quantify RNA-seq reads 
