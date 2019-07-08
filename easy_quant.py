@@ -13,13 +13,13 @@ import subprocess
 
 class CustomTranscriptome(object):
     
-    def __init__(self, cfg, input, fusions_table, working_dir):
+    def __init__(self, cfg, input, seq_tab, working_dir):
         
         self.cfg = cfg
         self.input = []
         for i in input:
             self.input.append(i.rstrip("/"))
-        self.fusions_table = fusions_table
+        self.seq_tab = seq_tab
         self.working_dir = working_dir.rstrip("/")
         if not os.path.exists(self.working_dir):
             print "INFO: Creating folder: " + self.working_dir
@@ -63,7 +63,7 @@ class CustomTranscriptome(object):
         
         outf_context = open(self.fasta,"w")
         
-        with open(self.fusions_table) as csvfile:
+        with open(self.seq_tab) as csvfile:
             inf = csv.reader(csvfile, delimiter=';')
             header = inf.next()
 
@@ -87,7 +87,7 @@ class CustomTranscriptome(object):
         
         outf_context = open(self.bed,"w")
         
-        with open(self.fusions_table) as csvfile:
+        with open(self.seq_tab) as csvfile:
             
             inf = csv.reader(csvfile, delimiter=';')
             header = inf.next()
@@ -210,9 +210,9 @@ class CustomTranscriptome(object):
 
             bam_file = os.path.join(star_path,"Aligned.sortedByCoord.out.bam")
     
-            cmd_star = "%s --outFileNamePrefix %s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn ${fq1} ${fq2} --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/", star_genome_path, self.cfg.get('commands', 'samtools_cmd'), bam_file)
+            cmd_star = "%s --outFileNamePrefix %s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn %s %s --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/", star_genome_path, file_1, file_2, self.cfg.get('commands', 'samtools_cmd'), bam_file)
     
-            cmd_class = "%s -i %s -b %s -o %s" % (self.cfg.get('commands', 'classification_cmd'), bam_file, os.path.join(self.working_dir, self.bed), os.path.join(self.working_dir, "Classification.csv"))
+            cmd_class = "%s -i %s -b %s -o %s" % (self.cfg.get('commands', 'classification_cmd'), bam_file, self.bed, os.path.join(self.working_dir, "quantification.csv"))
     
             out_shell.write("#!/bin/sh\n\n")
             out_shell.write("fq1="+file_1+"\n")
@@ -223,17 +223,17 @@ class CustomTranscriptome(object):
             if file_2:
                 out_shell.write("echo \"Starting STAR\"\n")
                 out_shell.write(cmd_star+"\n")
-                out_shell.write("echo \"Starting Classification\"\n")
+                out_shell.write("echo \"Starting quantification\"\n")
                 out_shell.write(cmd_class+"\n")
             out_shell.write("echo \"Processing done!\"\n")
 
-        # if not os.path.exists(os.path.join(star_path, "Log.final.out")):
-        #     self.execute_cmd(cmd_star, star_path)
-        # 
-        # if not os.path.exists(os.path.join(self.working_dir, "Classification.csv")):
-        #     self.execute_cmd(cmd_class, self.working_dir)
-        # 
-        # print "INFO: Processing complete for " + self.working_dir
+        if not os.path.exists(os.path.join(star_path, "Log.final.out")):
+            self.execute_cmd(cmd_star)
+
+        if not os.path.exists(os.path.join(self.working_dir, "quantification.csv")):
+            self.execute_cmd(cmd_class)
+
+        print "INFO: Processing complete for " + self.working_dir
 
     def execute_cmd(self, cmd, working_dir = "."):
         
@@ -250,14 +250,14 @@ def main():
     parser = ArgumentParser(description='Processing of demultiplexed FASTQs')
 
     parser.add_argument('-i', '--input', dest='input', nargs='+', help='Specify the fastq folder(s) or fastq file(s) to process.',required=True)
-    parser.add_argument('-f', '--fusions', dest='fusions', help='Specify the reference fusions table to base index on.',required=True)
+    parser.add_argument('-s', '--sequence_tab', dest='seq_tab', help='Specify the reference seqeunces as table with colums name, sequence, and position',required=True)
     parser.add_argument('-o', '--output-folder', dest='output_folder', help='Specify the folder to save the results into.',required=True)
     args = parser.parse_args()
 
     cfg = Config(os.path.join(os.path.dirname(os.path.realpath(__file__)),'config.ini'))
 
     
-    ct = CustomTranscriptome(cfg, args.input, args.fusions, args.output_folder)
+    ct = CustomTranscriptome(cfg, args.input, args.seq_tab, args.output_folder)
     ct.run()
     
     script_call = "python " + os.path.realpath(__file__) + " " + " ".join(sys.argv[1:])
