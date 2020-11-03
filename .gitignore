@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# ignore example output
+example_out*
+
+# ignore *.pyc fiels
+*.pyc
