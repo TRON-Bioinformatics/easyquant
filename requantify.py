@@ -156,7 +156,7 @@ def main():
     parser.add_argument('-i', '--input', dest='input', help='Specify input BAM file', required=True)
     parser.add_argument('-b', '--bed', dest='bed', help='Specify input BED file', required=True)
     parser.add_argument('-o', '--output', dest='output', help='Specify output file', required=True)
-    parser.add_argument('-d', '--bp_distance', dest='bp_distance', help='Threshold of bases around the breakpoint for junction/spanning counting', default="3")
+    parser.add_argument('-d', '--bp_distance', dest='bp_distance', help='Threshold of bases around the breakpoint for junction/spanning counting')
     args = parser.parse_args()
 
     requant = Requantification(args.input, args.bed, args.output, args.bp_distance)

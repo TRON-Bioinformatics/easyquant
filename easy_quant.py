@@ -13,13 +13,14 @@ import subprocess
 
 class CustomTranscriptome(object):
     
-    def __init__(self, cfg, input, seq_tab, working_dir):
+    def __init__(self, cfg, input, seq_tab, bp_distance, working_dir):
         
         self.cfg = cfg
         self.input = []
         for i in input:
             self.input.append(i.rstrip("/"))
         self.seq_tab = seq_tab
+        self.bp_distance = bp_distance
         self.working_dir = working_dir.rstrip("/")
         if not os.path.exists(self.working_dir):
             print "INFO: Creating folder: " + self.working_dir
@@ -212,7 +213,7 @@ class CustomTranscriptome(object):
     
             cmd_star = "%s --outFileNamePrefix %s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn %s %s --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/", star_genome_path, file_1, file_2, self.cfg.get('commands', 'samtools_cmd'), bam_file)
     
-            cmd_class = "%s -i %s -b %s -o %s" % (self.cfg.get('commands', 'classification_cmd'), bam_file, self.bed, os.path.join(self.working_dir, "quantification.csv"))
+            cmd_class = "%s -i %s -b %s -d %s -o %s" % (self.cfg.get('commands', 'classification_cmd'), bam_file, self.bed, self.bp_distance, os.path.join(self.working_dir, "quantification.csv"))
     
             out_shell.write("#!/bin/sh\n\n")
             out_shell.write("fq1="+file_1+"\n")
@@ -251,13 +252,14 @@ def main():
 
     parser.add_argument('-i', '--input', dest='input', nargs='+', help='Specify the fastq folder(s) or fastq file(s) to process.',required=True)
     parser.add_argument('-s', '--sequence_tab', dest='seq_tab', help='Specify the reference seqeunces as table with colums name, sequence, and position',required=True)
+    parser.add_argument('-d', '--bp_distance', dest='bp_distance', help='Threshold of bases around the breakpoint for junction/spanning counting', default=10)
     parser.add_argument('-o', '--output-folder', dest='output_folder', help='Specify the folder to save the results into.',required=True)
     args = parser.parse_args()
 
     cfg = Config(os.path.join(os.path.dirname(os.path.realpath(__file__)),'config.ini'))
 
     
-    ct = CustomTranscriptome(cfg, args.input, args.seq_tab, args.output_folder)
+    ct = CustomTranscriptome(cfg, args.input, args.seq_tab, args.bp_distance, args.output_folder)
     ct.run()
     
     script_call = "python " + os.path.realpath(__file__) + " " + " ".join(sys.argv[1:])
