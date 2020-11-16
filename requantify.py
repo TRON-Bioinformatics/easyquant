@@ -64,8 +64,18 @@ class Requantification(object):
 
     def count_junc_span(self, read, breakpoint_pos, junction_count, spanning_counts, anchor):
         """Identify whether a read belongs to a junction or spanning pair"""
+        max_mismatch_rate = 0.05
+        
+        # get mismatch fraction
+        cigar_s = read.get_cigar_stats()
+        m = cigar_s[0][0]
+        l = read.infer_read_length()
+        
+        # Note that M does not mean match, can also be missmatch
+        mismatch_rate = 1 - (m/l)
+        
         # read overlaps the fusion breakpoint
-        if breakpoint_pos >= self.bp_distance_threshold and read.get_overlap(breakpoint_pos - self.bp_distance_threshold, breakpoint_pos + self.bp_distance_threshold) == 2 * self.bp_distance_threshold:
+        if breakpoint_pos >= self.bp_distance_threshold and read.get_overlap(breakpoint_pos - self.bp_distance_threshold, breakpoint_pos + self.bp_distance_threshold) == 2 * self.bp_distance_threshold and mismatch_rate <= max_mismatch_rate:
             junction_count += 1
             anchor = max(anchor, min(read.reference_end - breakpoint_pos, breakpoint_pos - read.reference_start))
         # read maps left of the fusion breakpoint
