@@ -107,12 +107,6 @@ class CustomTranscriptome(object):
                 
                 name_pos = name + "_pos_" + position
                 
-                # genes = fgid.split("_", 1)
-                # gene1 = genes[0]
-                # gene2 = genes[1]
-                # 
-                # rel_bp = row[col["context_sequence_bp"]]
-                
                 # use 0 as position, if not given
                 location = 0
                 if position != "NA":
@@ -251,8 +245,8 @@ def main():
     parser = ArgumentParser(description='Processing of demultiplexed FASTQs')
 
     parser.add_argument('-i', '--input', dest='input', nargs='+', help='Specify the fastq folder(s) or fastq file(s) to process.',required=True)
-    parser.add_argument('-s', '--sequence_tab', dest='seq_tab', help='Specify the reference seqeunces as table with colums name, sequence, and position',required=True)
-    parser.add_argument('-d', '--bp_distance', dest='bp_distance', help='Threshold of bases around the breakpoint for junction/spanning counting', default=10)
+    parser.add_argument('-s', '--sequence_tab', dest='seq_tab', help='Specify the reference sequences as table with colums name, sequence, and position',required=True)
+    parser.add_argument('-d', '--bp_distance', dest='bp_distance', help='Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting', default=10)
     parser.add_argument('-o', '--output-folder', dest='output_folder', help='Specify the folder to save the results into.',required=True)
     args = parser.parse_args()
 
