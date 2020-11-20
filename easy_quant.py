@@ -107,12 +107,6 @@ class CustomTranscriptome(object):
                 
                 name_pos = name + "_pos_" + position
                 
-                # genes = fgid.split("_", 1)
-                # gene1 = genes[0]
-                # gene2 = genes[1]
-                # 
-                # rel_bp = row[col["context_sequence_bp"]]
-                
                 # use 0 as position, if not given
                 location = 0
                 if position != "NA":
@@ -211,9 +205,29 @@ class CustomTranscriptome(object):
 
             bam_file = os.path.join(star_path,"Aligned.sortedByCoord.out.bam")
     
-            cmd_star = "%s --outFileNamePrefix %s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn %s %s --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/", star_genome_path, file_1, file_2, self.cfg.get('commands', 'samtools_cmd'), bam_file)
-    
-            cmd_class = "%s -i %s -b %s -d %s -o %s" % (self.cfg.get('commands', 'classification_cmd'), bam_file, self.bed, self.bp_distance, os.path.join(self.working_dir, "quantification.csv"))
+            #cmd_star = "%s --outFileNamePrefix %s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn %s %s --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverReadLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/", star_genome_path, file_1, file_2, self.cfg.get('commands', 'samtools_cmd'), bam_file)
+            cmd_star = "%s --outFileNamePrefix %s \
+                --limitOutSAMoneReadBytes 1000000 \
+                --genomeDir %s \
+                --readFilesCommand 'gzip -d -c -f' \
+                --readFilesIn %s %s \
+                --outSAMmode Full \
+                --outFilterMultimapNmax -1 \
+                --outSAMattributes NH HI AS nM NM MD \
+                --outSAMunmapped None \
+                --outFilterMismatchNoverLmax 0.05 \
+                --outFilterMismatchNoverReadLmax 0.05 \
+                --outSAMtype BAM SortedByCoordinate \
+                --runThreadN 12 && \
+                %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/",
+                                star_genome_path, file_1, file_2,
+                                self.cfg.get('commands', 'samtools_cmd'), bam_file)
+
+            cmd_class = "%s -i %s -t %s -d %s -o %s" % (self.cfg.get('commands', 'classification_cmd'),
+                                                        bam_file,
+                                                        self.seq_tab,
+                                                        self.bp_distance,
+                                                        os.path.join(self.working_dir, "quantification.tsv"))
     
             out_shell.write("#!/bin/sh\n\n")
             out_shell.write("fq1="+file_1+"\n")
@@ -231,7 +245,7 @@ class CustomTranscriptome(object):
         if not os.path.exists(os.path.join(star_path, "Log.final.out")):
             self.execute_cmd(cmd_star)
 
-        if not os.path.exists(os.path.join(self.working_dir, "quantification.csv")):
+        if not os.path.exists(os.path.join(self.working_dir, "quantification.tsv")):
             self.execute_cmd(cmd_class)
 
         print "INFO: Processing complete for " + self.working_dir
@@ -251,8 +265,8 @@ def main():
     parser = ArgumentParser(description='Processing of demultiplexed FASTQs')
 
     parser.add_argument('-i', '--input', dest='input', nargs='+', help='Specify the fastq folder(s) or fastq file(s) to process.',required=True)
-    parser.add_argument('-s', '--sequence_tab', dest='seq_tab', help='Specify the reference seqeunces as table with colums name, sequence, and position',required=True)
-    parser.add_argument('-d', '--bp_distance', dest='bp_distance', help='Threshold of bases around the breakpoint for junction/spanning counting', default=10)
+    parser.add_argument('-s', '--sequence_tab', dest='seq_tab', help='Specify the reference sequences as table with colums name, sequence, and position',required=True)
+    parser.add_argument('-d', '--bp_distance', dest='bp_distance', help='Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting', default=10)
     parser.add_argument('-o', '--output-folder', dest='output_folder', help='Specify the folder to save the results into.',required=True)
     args = parser.parse_args()
 
