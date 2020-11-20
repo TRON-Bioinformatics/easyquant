@@ -205,9 +205,30 @@ class CustomTranscriptome(object):
 
             bam_file = os.path.join(star_path,"Aligned.sortedByCoord.out.bam")
     
-            cmd_star = "%s --outFileNamePrefix %s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn %s %s --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverReadLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/", star_genome_path, file_1, file_2, self.cfg.get('commands', 'samtools_cmd'), bam_file)
-    
-            cmd_class = "%s -i %s -b %s -d %s -o %s" % (self.cfg.get('commands', 'classification_cmd'), bam_file, self.bed, self.bp_distance, os.path.join(self.working_dir, "quantification.csv"))
+            #cmd_star = "%s --outFileNamePrefix %s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn %s %s --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverReadLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/", star_genome_path, file_1, file_2, self.cfg.get('commands', 'samtools_cmd'), bam_file)
+            cmd_star = "%s --outFileNamePrefix %s \
+                --limitOutSAMoneReadBytes 1000000 \
+                --genomeDir %s \
+                --readFilesCommand 'gzip -d -c -f' \
+                --readFilesIn %s %s \
+                --outSAMmode Full \
+                --outFilterMultimapNmax -1 \
+                --outSAMattributes NH HI AS nM NM MD \
+                --outSAMattributes Standard \
+                --outSAMunmapped None \
+                --outFilterMismatchNoverLmax 0.05 \
+                --outFilterMismatchNoverReadLmax 0.05 \
+                --outSAMtype BAM SortedByCoordinate \
+                --runThreadN 12 && \
+                %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/",
+                                star_genome_path, file_1, file_2,
+                                self.cfg.get('commands', 'samtools_cmd'), bam_file)
+
+            cmd_class = "%s -i %s -t %s -d %s -o %s" % (self.cfg.get('commands', 'classification_cmd'),
+                                                        bam_file,
+                                                        self.self.seq_tab,
+                                                        self.bp_distance,
+                                                        os.path.join(self.working_dir, "quantification.csv"))
     
             out_shell.write("#!/bin/sh\n\n")
             out_shell.write("fq1="+file_1+"\n")
