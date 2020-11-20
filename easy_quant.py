@@ -214,7 +214,6 @@ class CustomTranscriptome(object):
                 --outSAMmode Full \
                 --outFilterMultimapNmax -1 \
                 --outSAMattributes NH HI AS nM NM MD \
-                --outSAMattributes Standard \
                 --outSAMunmapped None \
                 --outFilterMismatchNoverLmax 0.05 \
                 --outFilterMismatchNoverReadLmax 0.05 \
@@ -226,9 +225,9 @@ class CustomTranscriptome(object):
 
             cmd_class = "%s -i %s -t %s -d %s -o %s" % (self.cfg.get('commands', 'classification_cmd'),
                                                         bam_file,
-                                                        self.self.seq_tab,
+                                                        self.seq_tab,
                                                         self.bp_distance,
-                                                        os.path.join(self.working_dir, "quantification.csv"))
+                                                        os.path.join(self.working_dir, "quantification.tsv"))
     
             out_shell.write("#!/bin/sh\n\n")
             out_shell.write("fq1="+file_1+"\n")
@@ -246,7 +245,7 @@ class CustomTranscriptome(object):
         if not os.path.exists(os.path.join(star_path, "Log.final.out")):
             self.execute_cmd(cmd_star)
 
-        if not os.path.exists(os.path.join(self.working_dir, "quantification.csv")):
+        if not os.path.exists(os.path.join(self.working_dir, "quantification.tsv")):
             self.execute_cmd(cmd_class)
 
         print "INFO: Processing complete for " + self.working_dir
