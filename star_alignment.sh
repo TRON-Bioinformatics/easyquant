@@ -29,10 +29,10 @@ ${star_bin} \
   --readFilesIn ${fq1} ${fq2} \
   --outSAMmode Full \
   --outFilterMultimapNmax -1 \
-  --outSAMattributes NH HI AS nM NM MD \
+  --outSAMattributes NH HI AS nM NM \
   --outSAMunmapped None \
-  --outFilterMismatchNoverLmax 0.05 \
-  --outFilterMismatchNoverReadLmax 0.05 \
+  --outFilterMismatchNoverLmax 0.02 \
+  --outFilterMismatchNoverReadLmax 0.02 \
   --outSAMtype BAM SortedByCoordinate \
   --runThreadN ${ncpu}
 
