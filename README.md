@@ -11,7 +11,7 @@ read pairs that span the breakpoint (spanning pairs).
 ## Workflow
 
 - Input:
-    - Tabel with target sequences and breakpoint position
+    - Table with target sequences and breakpoint position
     - fastq files
 - Map reads against sequences using STARR
     - Generate Index of sequences as reference
