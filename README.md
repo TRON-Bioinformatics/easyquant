@@ -96,30 +96,30 @@ respectively.
 
 ### Output format
 
-The main output consists of two files: 
+The main output consists of the file: 
 
- - `<OUTPUT_FOLDER>/quantification.csv.counts` contains normalized read counts for each sequence
- - `<OUTPUT_FOLDER>/quantification.csv.counts` contains raw read counts for each sequence
+ - `<OUTPUT_FOLDER>/quantification.tsv` contains raw read counts for each sequence
 
-The output of the example data `<OUTPUT_FOLDER>/quantification.csv.counts` should look like this:
+The output of the example data `<OUTPUT_FOLDER>/quantification.tsv` should look like this:
 
-|name          | position|    a|    b| junc| span| anch|
-|:-------------|--------:|----:|----:|----:|----:|----:|
-|CLDN18_1      |      400| 1097| 2500|  685|  693|   25|
-|HPRT1         |      400|  848|  690|  200|  220|   25|
-|CLDN18_2      |      361|    1| 1529|   21|    1|    7|
-|CLDN18_2_fake |      361|    0| 2420|   83|    0|    7|
-|CLDN18_total  |      400| 2794| 3483|  834|  729|   25|
-|CLDN18_1_fake |      400|    5| 2425|   87|    3|   14|
+
+| name          | pos | junc | span | anch | a    | b    |
+|:--------------|----:|-----:|-----:|-----:|-----:|-----:|
+| CLDN18_1      | 400 | 570  | 689  | 25   | 1096 | 2497 |
+| CLDN18_2      | 361 | 0    | 1    | 0    | 1    | 1529 |
+| CLDN18_total  | 400 | 596  | 689  | 25   | 2770 | 3467 |
+| CLDN18_1_fake | 400 | 2    | 3    | 14   | 5    | 2425 |
+| CLDN18_2_fake | 361 | 0    | 0    | 0    | 0    | 2420 |
+| HPRT1         | 400 | 107  | 216  | 25   | 848  | 686  |
 
 
 #### Columns in ouptut file
 
  - **name**   name of the input sequence
- - **position** position of interest relative to input sequence 
- - **a** reads mapping to sequence left of the position of interest
- - **b** reads mapping to sequence right of the position of interest
- - **junc** reads overalpping the position of interest
+ - **pos** position of interest relative to input sequence 
+ - **junc** reads overlapping the position of interest
  - **span** read pairs spanning the position of interest
  - **anch** maximal number of bases next to position of interest that are overlaped by a single read
+ - **a** reads mapping to sequence left of the position of interest
+ - **b** reads mapping to sequence right of the position of interest
 
