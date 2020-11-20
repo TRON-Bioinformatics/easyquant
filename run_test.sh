@@ -2,7 +2,7 @@
 module load  python/2.7.15
 
 # Test run for requantify.py
-python requantify.py \
+/code/Anaconda/3/2019/bin/python requantify.py \
   -i star_aln/Aligned.sortedByCoord.out.bam \
   -t example_data/CLDN18_Context_seq.csv \
   -d 10 \
