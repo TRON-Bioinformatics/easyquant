@@ -1,7 +1,15 @@
 
 module load  python/2.7.15
 
-# Run example data 
+# Run requantify.py
+
+python requantify.py \
+  -i star_aln/Aligned.sortedByCoord.out.bam \
+  -t example_data/CLDN18_Context_seq.csv \
+  -d 10 \
+  -o CLDN18_Context_seq.csv.counts_new4_star.tsv
+
+# Run easyqant on example data
 python easy_quant.py \
   -i example_data/example_rna-seq_R1_001.fastq.gz example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \

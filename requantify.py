@@ -188,12 +188,12 @@ def main():
     parser.add_argument('-i', '--input', dest='input', help='Input BAM file', required=True)
     parser.add_argument('-t', '--seq_table', dest='seq_table_file', help='Path to input sequence table', required=True)
     parser.add_argument('-o', '--output', dest='output', help='Output file', required=True)
-    parser.add_argument('-d', '--bp_distance', dest='bp_distance', default=10,
+    parser.add_argument('-d', '--bp_distance', dest='bp_distance', type=int, default=10,
                         help='Distance around postion of interest for junction read counts.')
     args = parser.parse_args()
 
     # parse sequence names and position of interest
-    seq_to_pos = get_seq_to_pos(args.seq_table)
+    seq_to_pos = get_seq_to_pos(args.seq_table_file)
 
     # parse mapped reads into cash
     cash = get_read_cash(bam_path=args.input)
@@ -202,7 +202,7 @@ def main():
     counts = count_reads(seq_to_pos, cash, bp_dist=args.bp_distance)
 
     # write to output file
-    write_counts(args.seq_table, counts, args.output)
+    write_counts(args.seq_table_file, counts, args.output)
 
 
 def test_run():
