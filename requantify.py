@@ -95,6 +95,10 @@ def count_reads(seq_to_pos, cash, bp_dist):
         # initialize anchor
         anchor: int = 0
 
+        # test if there are no reads for this sequence
+        if seq_name not in cash:
+            continue
+
         # iterate over all reads (read group):
         for read_name in cash[seq_name]:
 
