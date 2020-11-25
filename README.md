@@ -16,7 +16,6 @@ read pairs that span the breakpoint (spanning pairs).
 - Map reads against sequences using STARR
     - Generate Index of sequences as reference
     - Map reads
-- Generate BED file with defined regions (left part and right part)
 - Count reads using `requantify.py`
 - Output: 
     - Table with read counts per input sequence and fastq sample
@@ -24,6 +23,7 @@ read pairs that span the breakpoint (spanning pairs).
 ## Dependencies
 
  - Python 2.7.15
+ - Python 3
  - STARR
  - samtools (>= 1.9)
  
