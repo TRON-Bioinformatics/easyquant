@@ -37,8 +37,8 @@ git clone git@gitlab.rlp.net:tron/easyquant.git
 
 
 ```
-python easy_quant.py -h
-usage: easy_quant.py [-h] -i INPUT [INPUT ...] -s SEQ_TAB -o OUTPUT_FOLDER
+usage: easy_quant.py [-h] -i INPUT [INPUT ...] -s SEQ_TAB [-d BP_DISTANCE] -o
+                     OUTPUT_FOLDER
 
 Processing of demultiplexed FASTQs
 
@@ -48,10 +48,15 @@ optional arguments:
                         Specify the fastq folder(s) or fastq file(s) to
                         process.
   -s SEQ_TAB, --sequence_tab SEQ_TAB
-                        Specify the reference seqeunces as table with colums
+                        Specify the reference sequences as table with colums
                         name, sequence, and position
+  -d BP_DISTANCE, --bp_distance BP_DISTANCE
+                        Threshold in base pairs for the required overlap size
+                        of reads on both sides of the breakpoint for
+                        junction/spanning read counting
   -o OUTPUT_FOLDER, --output-folder OUTPUT_FOLDER
                         Specify the folder to save the results into.
+
 ```
 
 ### Use case with example data
@@ -63,6 +68,7 @@ with input sequences and positions, as well as two fastq files.
 python easy_quant.py \
   -i example_data/example_rna-seq_R1_001.fastq.gz example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
+  -d 10 \
   -o example_out
   
 ```
