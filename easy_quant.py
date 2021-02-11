@@ -41,12 +41,12 @@ def pair_fastq_files(fastqs):
     sample_id = []
     # iterate over the sorted list of file names and check for left/right pair file
 
-    print("\nGoing to process the following read files...")
+    #print("\nGoing to process the following read files...")
     for i, fq_file in enumerate(sorted(fastqs)):
         try:
             # Search for 1 or 2 between "_R|_" and "_|.f" in the basename of the file
             forrev = re.search('[_|.]R([1-2])(.*)(_|[.]f)', os.path.basename(fq_file)).group(1)
-            print(forrev)
+            #print(forrev)
         except AttributeError:
             forrev = '-1'
 
