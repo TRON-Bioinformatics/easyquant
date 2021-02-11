@@ -34,6 +34,41 @@ def get_fastq_files(paths):
     return fastqs
 
 
+def pair_fastq_files(fastqs):
+    """Pairs paired-end fastq files, if necessary using regular expressions."""
+    left = []
+    right = []
+    sample_id = []
+    # iterate over the sorted list of file names and check for left/right pair file
+
+    print("\nGoing to process the following read files...")
+    for i, fq_file in enumerate(sorted(fastqs)):
+        try:
+            # Search for 1 or 2 between "_R|_" and "_|.f" in the basename of the file
+            forrev = re.search('[_|.]R([1-2])(.*)(_|[.]f)', os.path.basename(fq_file)).group(1)
+            print(forrev)
+        except AttributeError:
+            forrev = '-1'
+
+        if forrev == '1':
+            left.append(fq_file)
+        elif forrev == '2':
+            right.append(fq_file)
+        else:
+            print('Warning: Ignoring \"{}\" as it doesn\'t seem to be a valid fastq file'.format(fq_file))
+    # Check whether file names match between paired files
+    if right:
+        for i, _ in enumerate(left):
+            sample_id_l = re.search('(.*)[_|.]R1(.*)(_|[.]f)', os.path.basename(left[i])).group(1)
+            sample_id_r = re.search('(.*)[_|.]R2(.*)(_|[.]f)', os.path.basename(right[i])).group(1)
+            sample_id.append(sample_id_l)
+
+            if sample_id_l != sample_id_r:
+                print('Error 99: Paired files names {0} and {1} do not match!'.format(sample_id_l, sample_id_r))
+                sys.exit(99)
+    return (left, right, sample_id)
+
+
 class CustomTranscriptome(object):
     
     def __init__(self, cfg, input_paths, seq_tab, bp_distance, working_dir):
@@ -71,16 +106,12 @@ class CustomTranscriptome(object):
         outf_context = open(self.fasta, "w")
         
         with open(self.seq_tab, "r", newline="\n") as csvfile:
+            # Auto detect dialect of input file
             dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
             csvfile.seek(0)
-            #reader = csv.reader(csvfile, dialect)
             reader = csv.DictReader(csvfile, dialect=dialect)
-            #header = reader.next()
 
-            #col = {}
-            #for i, colname in enumerate(header):
-            #    col[colname] = i
-                
+            # Iterate over input file rows
             for row in reader:
                 
                 name = row["name"]
@@ -98,19 +129,12 @@ class CustomTranscriptome(object):
         outf_context = open(self.bed, "w")
         
         with open(self.seq_tab) as csvfile:
+            # Auto detect dialect of input file
             dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
             csvfile.seek(0)
-            #reader = csv.reader(csvfile, dialect)
             reader = csv.DictReader(csvfile, dialect=dialect)
-            #inf = csv.reader(csvfile, delimiter=';')
-            #header = reader.next()
-            #col = {}
-            
-            # read column names as dictionary to column numbers
-            #for i, colname in enumerate(header):
-            #    col[colname] = i
-            
-            # iterate over rows
+
+            # Iterate over input file rows
             for row in reader:
                 
                 name = row["name"]
@@ -131,8 +155,6 @@ class CustomTranscriptome(object):
                 end1 = location
                 end2 = len(sequence)
 
-                #outf_context.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (name, start, end1, name_pos + "_A", "0", "+"))
-                #outf_context.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (name, end1, end2,  name_pos + "_B", "0", "+"))
                 outf_context.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(name, start, end1, name_pos + "_A", "0", "+"))
                 outf_context.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(name, end1, end2, name_pos + "_B", "0", "+"))
 
@@ -173,30 +195,17 @@ class CustomTranscriptome(object):
         
         fastqs = get_fastq_files(self.input_paths)
         file_array = sorted(fastqs)
-        
         print("INFO: Fastq files: {}".format(file_array))
-        
-        left = []
-        right = []
-        for i in range(len(file_array)):
-            file_array_split = file_array[i].rsplit("_", 2)
-            skewer_split = ""
-            try:
-                skewer_split = file_array[i].rsplit("-", 1)[1].rsplit(".", 2)[0]
-            except:
-                skewer_split = ""
-            if "R1" in file_array_split[1] or skewer_split == "pair1":
-                left.append(file_array[i])
-            elif "R2" in file_array_split[1] or skewer_split == "pair2":
-                right.append(file_array[i])
-                
-        for i, ele in enumerate(left):
 
-            if len(right) != 0:
-                print("INFO: Start pipeline with:")
+        left, right, sample_id = pair_fastq_files(fastqs)
+
+        for i, _ in enumerate(left):
+            if len(left) == len(right):
+                print("INFO: Processing Sample ID: {} (paired end)".format(sample_id[i]))
                 print("INFO:    Sample 1: {}".format(left[i]))
                 print("INFO:    Sample 2: {}".format(right[i]))
                 self.execute_pipeline(left[i], right[i])
+
 
     def execute_pipeline(self, file_1, file_2):
         """This function runs the pipeline on paired-end FASTQ files."""
@@ -219,7 +228,6 @@ class CustomTranscriptome(object):
 
             bam_file = os.path.join(star_path, "Aligned.sortedByCoord.out.bam")
     
-            #cmd_star = "%s --outFileNamePrefix %s --limitOutSAMoneReadBytes 1000000 --genomeDir %s --readFilesCommand 'gzip -d -c -f' --readFilesIn %s %s --outSAMmode Full --outFilterMultimapNmax -1 --outSAMattributes Standard --outSAMunmapped None --outFilterMismatchNoverReadLmax 0.02 --outSAMtype BAM SortedByCoordinate --runThreadN 12 && %s index %s" % (self.cfg.get('commands','star_cmd'), star_path + "/", star_genome_path, file_1, file_2, self.cfg.get('commands', 'samtools_cmd'), bam_file)
             cmd_star = "{} --outFileNamePrefix {} \
                 --limitOutSAMoneReadBytes 1000000 \
                 --genomeDir {} \
