@@ -11,7 +11,7 @@ read pairs that span the breakpoint (spanning pairs).
 ## Workflow
 
 - Input:
-    - Table with target sequences and breakpoint position
+    - Table with target sequences and breakpoint position (in semicolon separated CSV format)
     - fastq files
 - Map reads against sequences using STARR
     - Generate Index of sequences as reference
@@ -79,7 +79,7 @@ python easy_quant.py \
 
 #### Table with input sequences
 
-As input a tab-separated table should be given holding the target sequence 
+As input a semicolon-separated table should be given holding the target sequence 
 with unique names and the relativ position of the brekapoint or fusion junction.
 
 Example format of the input table:
