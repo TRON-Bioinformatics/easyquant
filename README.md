@@ -13,7 +13,7 @@ read pairs that span the breakpoint (spanning pairs).
 - Input:
     - Table with target sequences and breakpoint position (in semicolon separated CSV format)
     - fastq files
-- Map reads against sequences using STARR
+- Map reads against sequences using STAR
     - Generate Index of sequences as reference
     - Map reads
 - Count reads using `requantify.py`
@@ -24,7 +24,7 @@ read pairs that span the breakpoint (spanning pairs).
 
  - Python 2.7.15
  - Python 3
- - STARR
+ - STAR
  - samtools (>= 1.9)
  
 ## Installation
