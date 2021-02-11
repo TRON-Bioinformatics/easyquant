@@ -11,9 +11,9 @@ read pairs that span the breakpoint (spanning pairs).
 ## Workflow
 
 - Input:
-    - Table with target sequences and breakpoint position (in semicolon separated CSV format)
+    - Table with target sequences and breakpoint position (CSV/TSV format)
     - fastq files
-- Map reads against sequences using STARR
+- Map reads against sequences using STAR
     - Generate Index of sequences as reference
     - Map reads
 - Count reads using `requantify.py`
@@ -24,7 +24,7 @@ read pairs that span the breakpoint (spanning pairs).
 
  - Python 2.7.15
  - Python 3
- - STARR
+ - STAR
  - samtools (>= 1.9)
  
 ## Installation
@@ -79,7 +79,7 @@ python easy_quant.py \
 
 #### Table with input sequences
 
-As input a semicolon-separated table should be given holding the target sequence 
+As input a CSV/TSV table should be given holding the target sequence 
 with unique names and the relativ position of the brekapoint or fusion junction.
 
 Example format of the input table:
