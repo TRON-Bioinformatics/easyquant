@@ -22,7 +22,6 @@ read pairs that span the breakpoint (spanning pairs).
 
 ## Dependencies
 
- - Python 2.7.15
  - Python 3
  - STAR
  - samtools (>= 1.9)
