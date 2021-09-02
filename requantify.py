@@ -6,6 +6,7 @@ Count reads that support a given position of interest
 
 from argparse import ArgumentParser
 import pysam
+import csv
 
 
 def get_seq_to_pos(seq_table_file):
@@ -18,17 +19,21 @@ def get_seq_to_pos(seq_table_file):
     # initialize dict
     seq_to_pos = {}
 
-    # iterate over all lines and fill dict
-    with open(seq_table_file) as in_handle:
-        for i, line in enumerate(in_handle):
-            # skip header line
-            if i >= 1:
-                sp = line.strip().split(";")
-                name = sp[0]
-                pos = int(sp[2])
-                seq_to_pos[name] = pos
-    return seq_to_pos
+    with open(seq_table_file, "r") as csvfile:
+        # Auto detect dialect of input file
+        dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
+        csvfile.seek(0)
+        reader = csv.DictReader(csvfile, dialect=dialect)
 
+        # Iterate over input file rows
+        for row in reader:
+            
+            name = row["name"]
+            pos = int(row["position"])
+            
+            seq_to_pos[name] = pos
+            
+    return seq_to_pos
 
 def get_read_cash(bam_path):
     """
@@ -165,25 +170,40 @@ def write_counts(in_file, counts, out_file):
     """
     Write read counts to output file
     """
-    with open(in_file) as in_handle:
+    
+    # open input file
+    with open(in_file) as csvfile:
+
+        # Auto detect dialect of input file
+        dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
+        csvfile.seek(0)
+        reader = csv.DictReader(csvfile, dialect=dialect)
+        
+        # open output file
         with open(out_file, "w") as out_handle:
-            for i, line in enumerate(in_handle):
-                # skip header line
-                sp = line.strip().split(";")
-                if i == 0:
-                    sp_out = ["name", "pos", "junc", "span", "anch", "a", "b"]
-                else:
-                    # get sequence name from first colum
-                    seq_name = sp[0]
+            
+            # write header line
+            sp_out = ["name", "pos", "junc", "span", "anch", "a", "b"]
+            out_line = "\t".join(sp_out) + "\n"
+            out_handle.write(out_line)
+            
+            # Iterate over input file rows
+            for row in reader:
+                
+                name = row["name"]
+                # sequence = row["sequence"]
+                position = row["position"]
 
-                    # get sequence counts
-                    seq_counts = counts[seq_name]
+                # get sequence counts
+                seq_counts = counts[name]
 
-                    # drob sequence and construct output columns
-                    sp_out = [sp[0], sp[2]] + [str(c) for c in seq_counts]
-
+                # drob sequence and construct output columns
+                sp_out = [name, position] + [str(c) for c in seq_counts]
+                
+                # write as otput line to output file
                 out_line = "\t".join(sp_out) + "\n"
                 out_handle.write(out_line)
+
 
 
 def main():
