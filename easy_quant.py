@@ -105,7 +105,7 @@ class CustomTranscriptome(object):
         """This function converts the target sequences TSV/CSV file to the FASTA format."""
         outf_context = open(self.fasta, "w")
         
-        with open(self.seq_tab, "r", newline="\n") as csvfile:
+        with open(self.seq_tab, "r") as csvfile:
             # Auto detect dialect of input file
             dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
             csvfile.seek(0)
@@ -245,7 +245,8 @@ class CustomTranscriptome(object):
                                 star_genome_path, file_1, file_2,
                                 self.cfg.get('commands', 'samtools_cmd'), bam_file)
 
-            cmd_class = "{} -i {} -t {} -d {} -o {}".format(self.cfg.get('commands', 'classification_cmd'),
+            cmd_class = "python {} -i {} -t {} -d {} -o {}".format(
+                                                        os.path.join(os.path.dirname(__file__), "requantify.py"),
                                                         bam_file,
                                                         self.seq_tab,
                                                         self.bp_distance,
