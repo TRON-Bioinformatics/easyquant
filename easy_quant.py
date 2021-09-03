@@ -178,7 +178,16 @@ class CustomTranscriptome(object):
         # according to STAR parameter --genomeSAindexNbases 
         # If genome size is to small, mapping is very slow, therfore use at least 4
         sa_index_nbases = min(14, max(4, int(math.log(self.calc_fasta_size()) / 2 - 1)))
-        cmd_star = "{} --runMode genomeGenerate --runThreadN 12 --genomeSAindexNbases {} --genomeDir {} --genomeFastaFiles {}".format(self.cfg.get('commands','star_cmd'), sa_index_nbases, star_idx_path, self.fasta)
+        cmd_star = "{} --runMode genomeGenerate  \
+            --runThreadN 12 --genomeSAindexNbases {}  \
+            --genomeDir {}  \
+            --genomeFastaFiles {}  \
+            --limitGenomeGenerateRAM {}".format(
+                self.cfg.get('commands','star_cmd'), 
+                sa_index_nbases, 
+                star_idx_path, 
+                self.fasta, 
+                self.cfg.get('commands','star_limit_genome_ram'))
 
         out_shell.write("#!/bin/sh\n\n")
         out_shell.write("working_dir={}\n".format(self.working_dir))
