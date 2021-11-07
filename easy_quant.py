@@ -70,9 +70,9 @@ def pair_fastq_files(fastqs):
 
 
 class CustomTranscriptome(object):
-    
-    def __init__(self, cfg, input_paths, seq_tab, bp_distance, working_dir):
-        
+
+    def __init__(self, cfg, input_paths, seq_tab, bp_distance, working_dir, filename):
+
         self.cfg = cfg
         self.input_paths = []
         for path in input_paths:
@@ -80,6 +80,7 @@ class CustomTranscriptome(object):
         self.seq_tab = seq_tab
         self.bp_distance = bp_distance
         self.working_dir = working_dir.rstrip("/")
+        self.quantresults = filename
         if not os.path.exists(self.working_dir):
             print("INFO: Creating folder: {}".format(self.working_dir))
             os.makedirs(self.working_dir)
@@ -93,18 +94,21 @@ class CustomTranscriptome(object):
     def calc_fasta_size(self):
         """This function calculates the FASTA size in bp."""
         fasta_size = 0
+        fasta_lines = 0
         with open(self.fasta) as inf:
             for line in inf:
                 if not line.rstrip().startswith(">"):
                     fasta_size += len(line.rstrip())
+                    fasta_lines = fasta_lines + 1
         print("INFO: FASTA Size: {}bp".format(fasta_size))
-        return fasta_size
+        print("INFO: FASTA Lines: {}lines".format(fasta_lines))
+        return fasta_size, fasta_lines
 
 
     def csv_to_fasta(self):
         """This function converts the target sequences TSV/CSV file to the FASTA format."""
         outf_context = open(self.fasta, "w")
-        
+
         with open(self.seq_tab, "r") as csvfile:
             # Auto detect dialect of input file
             dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
@@ -113,21 +117,21 @@ class CustomTranscriptome(object):
 
             # Iterate over input file rows
             for row in reader:
-                
+
                 name = row["name"]
                 sequence = row["sequence"]
                 position = row["position"]
-                
+
                 outf_context.write(">{}\n".format(name))
                 for i in range(0, len(sequence), 60):
                     outf_context.write("{}\n".format(sequence[i:i+60]))
-                    
+
         outf_context.close()
 
     def generate_bed(self):
         """This function converts the target sequences TSV/CSV file to the BED format."""
         outf_context = open(self.bed, "w")
-        
+
         with open(self.seq_tab) as csvfile:
             # Auto detect dialect of input file
             dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
@@ -136,13 +140,13 @@ class CustomTranscriptome(object):
 
             # Iterate over input file rows
             for row in reader:
-                
+
                 name = row["name"]
                 sequence = row["sequence"]
                 position = row["position"]
-                
+
                 name_pos = "{}_pos_{}".format(name, position)
-                
+
                 # use 0 as position, if not given
                 location = 0
                 if position != "NA":
@@ -162,32 +166,24 @@ class CustomTranscriptome(object):
 
     def build_index(self):
         """This function builds an index on the input sequences for mapping with STAR."""
-        
+
         star_idx_path = os.path.join(self.working_dir, "STAR_idx")
 
 
         for folder in [star_idx_path]:
             if not os.path.exists(folder):
                 print("INFO: Creating folder: {}".format(folder))
-                os.makedirs(folder)            
+                os.makedirs(folder)
 
         shell_script = os.path.join(self.working_dir, "generate_index.sh")
         out_shell = open(shell_script, "w")
-        
+
         # calculate length of SA pre-indexing string.
-        # according to STAR parameter --genomeSAindexNbases 
+        # according to STAR parameter --genomeSAindexNbases
         # If genome size is to small, mapping is very slow, therfore use at least 4
-        sa_index_nbases = min(14, max(4, int(math.log(self.calc_fasta_size()) / 2 - 1)))
-        cmd_star = "{} --runMode genomeGenerate  \
-            --runThreadN 12 --genomeSAindexNbases {}  \
-            --genomeDir {}  \
-            --genomeFastaFiles {}  \
-            --limitGenomeGenerateRAM {}".format(
-                self.cfg.get('commands','star_cmd'), 
-                sa_index_nbases, 
-                star_idx_path, 
-                self.fasta, 
-                self.cfg.get('commands','star_limit_genome_ram'))
+        sa_index_nbases = min(14, max(4, int(math.log(self.calc_fasta_size()[0]) / 2 - 1)))
+        genomechrbinnbits = min(10, int(math.log2(3000000000000/self.calc_fasta_size()[1])))
+        cmd_star = "{} --runMode genomeGenerate --runThreadN 12 --genomeSAindexNbases {} --genomeChrBinNbits {} --genomeDir {} --genomeFastaFiles {} --limitGenomeGenerateRAM {}".format(self.cfg.get('commands','star_cmd'), sa_index_nbases, genomechrbinnbits, star_idx_path, self.fasta, self.cfg.get('commands','star_limit_genome_ram'))
 
         out_shell.write("#!/bin/sh\n\n")
         out_shell.write("working_dir={}\n".format(self.working_dir))
@@ -201,7 +197,7 @@ class CustomTranscriptome(object):
 
     def run(self):
         """This function starts processing of the samples."""
-        
+
         fastqs = get_fastq_files(self.input_paths)
         file_array = sorted(fastqs)
         print("INFO: Fastq files: {}".format(file_array))
@@ -219,26 +215,25 @@ class CustomTranscriptome(object):
     def execute_pipeline(self, file_1, file_2):
         """This function runs the pipeline on paired-end FASTQ files."""
         print("INFO: Execute pipeline on {} {}".format(file_1, file_2))
-        
+
         star_genome_path = os.path.join(self.working_dir, "STAR_idx")
 
         star_path = os.path.join(self.working_dir, "star")
-        
+
         # create folder
         if not os.path.exists(star_path):
             print("INFO: Creating folder: {}".format(star_path))
             os.makedirs(star_path)
-        
-        # define bash script in working directory    
+
+        # define bash script in working directory
         shell_script = os.path.join(self.working_dir, "requant.sh")
-        
+
         # start to write shell script to execute mapping cmd
         with open(shell_script, "w") as out_shell:
 
             bam_file = os.path.join(star_path, "Aligned.sortedByCoord.out.bam")
-    
-            cmd_star = "{} --outFileNamePrefix {} \
-                --limitOutSAMoneReadBytes 1000000 \
+
+            cmd_star = "{} --outFileNamePrefix {} --limitOutSAMoneReadBytes 1000000 --limitBAMsortRAM 6002422999 \
                 --genomeDir {} \
                 --readFilesCommand 'gzip -d -c -f' \
                 --readFilesIn {} {} \
@@ -259,8 +254,8 @@ class CustomTranscriptome(object):
                                                         bam_file,
                                                         self.seq_tab,
                                                         self.bp_distance,
-                                                        os.path.join(self.working_dir, "quantification.tsv"))
-    
+                                                        os.path.join(self.working_dir, self.quantresults + ".tsv"))
+
             out_shell.write("#!/bin/sh\n\n")
             out_shell.write("fq1={}\n".format(file_1))
             if file_2:
@@ -277,7 +272,7 @@ class CustomTranscriptome(object):
         if not os.path.exists(os.path.join(star_path, "Log.final.out")):
             self.execute_cmd(cmd_star)
 
-        if not os.path.exists(os.path.join(self.working_dir, "quantification.tsv")):
+        if not os.path.exists(os.path.join(self.working_dir, self.quantresults + ".tsv")):
             self.execute_cmd(cmd_class)
 
         print("INFO: Processing complete for {}".format(self.working_dir))
@@ -300,16 +295,17 @@ def main():
     parser.add_argument("-s", "--sequence_tab", dest="seq_tab", help="Specify the reference sequences as table with colums name, sequence, and position", required=True)
     parser.add_argument("-d", "--bp_distance", dest="bp_distance", help="Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting", default=10)
     parser.add_argument("-o", "--output-folder", dest="output_folder", help="Specify the folder to save the results into.", required=True)
+    parser.add_argument("-of", "--outputfilename", dest="outputfilename", help="Specify name of file with quantification results", required=True)
     args = parser.parse_args()
 
     cfg = Config(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini"))
 
-    
-    ct = CustomTranscriptome(cfg, args.input_paths, args.seq_tab, args.bp_distance, args.output_folder)
+
+    ct = CustomTranscriptome(cfg, args.input_paths, args.seq_tab, args.bp_distance, args.output_folder, args.outputfilename)
     ct.run()
-    
+
     script_call = "python {} {}".format(os.path.realpath(__file__), " ".join(sys.argv[1:]))
-    
+
     outf = open(os.path.join(args.output_folder, "run_command.sh"), "w")
     outf.write("#!/bin/sh\n\n")
     outf.write(script_call)
