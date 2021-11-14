@@ -1,4 +1,6 @@
-
+module load bioinf/bwa/0.7.17
+module load bioinf/samtools/1.11
+module load anaconda/3/2019
 
 fq1=example_data/example_rna-seq_R1_001.fastq.gz
 fq2=example_data/example_rna-seq_R2_001.fastq.gz
@@ -12,6 +14,7 @@ cp example_out_0.2/context.fa bwa_ref/context.fa
 # index
 bwa index bwa_ref/context.fa
 
+# map
 bwa aln -t ${ncpu} bwa_ref/context.fa ${fq1} > bwa_aln/`basename $fq1`.sai
 bwa aln -t ${ncpu} bwa_ref/context.fa ${fq2} > bwa_aln/`basename $fq2`.sai
 bwa sampe bwa_ref/context.fa bwa_aln/`basename $fq1`.sai bwa_aln/`basename $fq2`.sai ${fq1} ${fq2}  \
@@ -19,4 +22,13 @@ bwa sampe bwa_ref/context.fa bwa_aln/`basename $fq1`.sai bwa_aln/`basename $fq2`
   | samtools sort  \
   > bwa_aln/example_rna-seq.bam
 samtools index bwa_aln/example_rna-seq.bam
+
+# requantify
+python requantify.py \
+  -i bwa_aln/example_rna-seq.bam \
+  -t example_data/CLDN18_Context_seq.tsv \
+  -d 10 \
+  -o bwa_aln/quantification.tsv
+
+
 
