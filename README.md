@@ -1,17 +1,17 @@
 # easyquant
 
-*Quantification of reads at defined positions to varify custom input sequences.*
+*Quantification of reads at defined positions to verify custom input sequences.*
 
-
-Given a gene fusion or splicing junction of interest, this tool can quantify RNA-seq reads 
-supporting the breakpoint (junction) by quantifying reads that map to the breakpoint (junction reads) and
-read pairs that span the breakpoint (spanning pairs).
+Given a gene fusion or splicing junction of interest, this tool can quantify
+RNA-seq reads supporting the breakpoint (or splice junction) by quantifying
+reads that map to the breakpoint (junction reads) and read pairs that span the
+breakpoint (spanning pairs).
 
 
 ## Workflow
 
 - Input:
-    - Table with target sequences and breakpoint position (CSV/TSV format)
+    - Table with target sequences and breakpoints position (CSV/TSV format)
     - fastq files
 - Map reads against sequences using STAR
     - Generate Index of sequences as reference
@@ -23,13 +23,20 @@ read pairs that span the breakpoint (spanning pairs).
 ## Dependencies
 
  - Python 3
- - STAR
+ - STAR (>= 2.6.1d)
  - samtools (>= 1.9)
  
 ## Installation
 
 ```
-git clone git@gitlab.rlp.net:tron/easyquant.git
+git clone https://github.com/TRON-Bioinformatics/easyquant.git
+```
+
+Update `config.ini` with installation paths
+
+```
+samtools_cmd=/path/to/samtools/1.9/samtools
+star_cmd=/path/to/STAR/2.6.1d/bin/Linux_x86_64_static/STAR
 ```
 
 ## Usage
