@@ -8,3 +8,5 @@ example_out*
 
 # ignore *.pyc fiels
 *.pyc
+
+*.Rproj
