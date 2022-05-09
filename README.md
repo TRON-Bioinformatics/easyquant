@@ -63,6 +63,8 @@ optional arguments:
                         junction/spanning read counting
   -o OUTPUT_FOLDER, --output-folder OUTPUT_FOLDER
                         Specify the folder to save the results into.
+  -m {star,bowtie2,bwa}, --method {star,bowtie2,bwa}
+                        Specify alignment software to generate the index
   --interval-mode       Specify if interval mode shall be used  
 
 ```
@@ -77,7 +79,8 @@ python easy_quant.py \
   -i example_data/example_rna-seq_R1_001.fastq.gz example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
-  -o example_out
+  -o example_out \
+  -m star
   
 ```
 
@@ -150,6 +153,8 @@ Using the interval mode the output will look slightly different:
 
 #### Columns in output file
 
+### While not using interval mode
+
  - **name**   name of the input sequence
  - **pos** position of interest relative to input sequence 
  - **junc** reads overlapping the position of interest
@@ -157,6 +162,10 @@ Using the interval mode the output will look slightly different:
  - **anch** maximal number of bases next to position of interest that are overlaped by a single read
  - **a** reads mapping to sequence left of the position of interest
  - **b** reads mapping to sequence right of the position of interest
+
+### While using interval mode
+
+ - **name**   name of the input sequence
  - **interval** interval of interest relative to input sequence
  - **overlap_stop** reads overlapping the end of the respective interval
  - **span_read** reads pairing with a read of a different interval
