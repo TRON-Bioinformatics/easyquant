@@ -23,6 +23,7 @@ breakpoint (spanning pairs).
 ## Dependencies
 
  - Python 3
+   - pysam (>= 0.16.0.1)
  - STAR (>= 2.6.1d)
  - samtools (>= 1.9)
  
@@ -62,6 +63,7 @@ optional arguments:
                         junction/spanning read counting
   -o OUTPUT_FOLDER, --output-folder OUTPUT_FOLDER
                         Specify the folder to save the results into.
+  --interval-mode       Specify if interval mode shall be used  
 
 ```
 
@@ -86,7 +88,7 @@ python easy_quant.py \
 #### Table with input sequences
 
 As input a CSV/TSV table should be given holding the target sequence 
-with unique names and the relativ position of the brekapoint or fusion junction.
+with unique names and the relative position(s) of the breakpoint(s)/intervals or fusion junction.
 
 Example format of the input table:
 
@@ -95,6 +97,7 @@ Example format of the input table:
 |seq1     | AACCGCCACCG   |5          |
 |seq2     | GTCCGTTGGCG   |5          |
 |seq3     | AACCGCCCTGT   |5          |
+|seq4     | CGGCATCATCG   |0,5,10     |
 
 
 #### Fastq files
@@ -125,7 +128,27 @@ The output of the example data `<OUTPUT_FOLDER>/quantification.tsv` should look 
 | HPRT1         | 400 | 107  | 216  | 25   | 848  | 686  |
 
 
-#### Columns in ouptut file
+Using the interval mode the output will look slightly different:
+
+| name          | interval | overlap_stop | span_read | within_interval | coverage_perc | coverage_mean |
+|:--------------|---------:|-------------:|----------:|----------------:|--------------:|--------------:|
+| CLDN18_1      | 0_400    | 570          | 969       | 1191            | 0.89          | 191.9775      |
+| CLDN18_1      | 400_786  | 0            | 969       | 3817            | 1.0           | 508.342       |
+| CLDN18_2      | 0_361    | 0            | 1         | 1               | 0.141         | 0.141         |
+| CLDN18_2      | 361_747  | 0            | 1         | 75              | 0.953         | 9.513         |
+| CLDN18_total  | 0_400    | 596          | 1097      | 1624            | 1.0           | 244.4125      |
+| CLDN18_total  | 400_786  | 0            | 1097      | 1409            | 1.0           | 183.847       |
+| CLDN18_1_fake | 0_400    | 2            | 5         | 5               | 0.2525        | 0.705         |
+| CLDN18_1_fake | 400_786  | 0            | 5         | 4199            | 1.0           | 548.430       |
+| CLDN18_2_fake | 0_361    | 0            | 0         | 0               | 0.0           | 0.0           |
+| CLDN18_2_fake | 361_747  | 0            | 0         | 356             | 1.0           | 41.003        |
+| HPRT1         | 0_400    | 107          | 341       | 1443            | 1.0           | 187.12        |
+| HPRT1         | 400_793  | 0            | 341       | 1082            | 1.0           | 138.483       |
+
+
+
+
+#### Columns in output file
 
  - **name**   name of the input sequence
  - **pos** position of interest relative to input sequence 
@@ -134,4 +157,9 @@ The output of the example data `<OUTPUT_FOLDER>/quantification.tsv` should look 
  - **anch** maximal number of bases next to position of interest that are overlaped by a single read
  - **a** reads mapping to sequence left of the position of interest
  - **b** reads mapping to sequence right of the position of interest
-
+ - **interval** interval of interest relative to input sequence
+ - **overlap_stop** reads overlapping the end of the respective interval
+ - **span_read** reads pairing with a read of a different interval
+ - **within_interval** reads mapping fully onto the interval
+ - **coverage_perc** percentual coverage of the interval by aligned reads
+ - **coverage_mean** average coverage per base for the interval (fold coverage)

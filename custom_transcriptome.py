@@ -15,16 +15,6 @@ def csv_to_fasta(csv_in, fasta_out):
     """This function converts the target sequences TSV/CSV file to the FASTA format."""
     outf = open(fasta_out, "w")
 
-#    with open(csv_in) as inf:
-#        for line in inf:
-#            elements = line.rstrip().split(";")
-#            name = elements[0]
-#            sequence = elements[1]
-#            position = elements[2]
-
-#            outf.write(">{}\n".format(name))
-#            for i in range(0, len(sequence), 60):
-#                outf.write("{}\n".format(sequence[i:i+60]))
 
     with open(csv_in, "r", newline="\n") as csvfile:
         # Auto detect dialect of input file
@@ -94,34 +84,39 @@ def csv_to_bed(csv_in, bed_out):
     outf.close()
 
 
-def build_index(cfg, fasta_in, folder_out):
-    """This function builds an index on the input sequences for mapping with STAR."""
-
-    star_idx_path = os.path.join(folder_out, "STAR_idx")
-
-
-    IOMethods.create_folder(star_idx_path)
-
+def build_index(cfg, fasta_in, folder_out, method):
+    """This function builds an index on the input sequences for mapping with BWA."""
+    
     shell_script = os.path.join(folder_out, "generate_index.sh")
     out_shell = open(shell_script, "w")
 
-    # calculate length of SA pre-indexing string.
-    # according to STAR parameter --genomeSAindexNbases
-    # If genome size is to small, mapping is very slow, therfore use at least 4
-    sa_index_nbases = min(14, max(4, int(math.log(get_fasta_size(fasta_in)) / 2 - 1)))
-    cmd = "{} --runMode genomeGenerate --limitGenomeGenerateRAM 40000000000 --runThreadN 12 --genomeSAindexNbases {} --genomeDir {} --genomeFastaFiles \
-{}".format(cfg.get('commands','star_cmd'), sa_index_nbases, star_idx_path, fasta_in)
+    cmd = ""
+
+    if method == "star":
+        idx_path = os.path.join(folder_out, "star_idx")
+        IOMethods.create_folder(idx_path)
+        # calculate length of SA pre-indexing string.
+        # according to STAR parameter --genomeSAindexNbases
+        # If genome size is to small, mapping is very slow, therfore use at least 4
+        sa_index_nbases = min(14, max(4, int(math.log(get_fasta_size(fasta_in)) / 2 - 1)))
+        cmd = "{} --runMode genomeGenerate --limitGenomeGenerateRAM 40000000000 --runThreadN 12 --genomeSAindexNbases {} --genomeDir {} --genomeFastaFiles {}".format(cfg.get('commands','star_cmd'), sa_index_nbases, idx_path, fasta_in)
+    elif method == "bwa":
+        cmd = "{} index {}".format(cfg.get('commands', 'bwa_cmd'), fasta_in)
+    elif method == "bowtie2":
+        idx_path = os.path.join(folder_out, "bowtie2_idx")
+        IOMethods.create_folder(idx_path)
+        cmd = "{}-build {} {}/bowtie".format(cfg.get('commands', 'bowtie2_cmd'), fasta_in, idx_path)
 
     out_shell.write("#!/bin/sh\n\n")
     out_shell.write("working_dir={}\n".format(folder_out))
-    out_shell.write("echo \"Generating STAR index\"\n")
+    out_shell.write("echo \"Generating {} index\"\n".format(method))
     out_shell.write("{}\n".format(cmd))
     out_shell.write("echo \"Processing done!\"\n")
     out_shell.close()
 
     #if not os.path.exists(os.path.join(star_idx_path, "Genome")):
     print("Executing CMD: {}".format(cmd))
-    p = subprocess.run(cmd, cwd = folder_out, shell = True)
+    p = subprocess.run(cmd, shell = True)
 
 
 class CustomTranscriptome(object):
@@ -137,10 +132,9 @@ class CustomTranscriptome(object):
         self.bed = os.path.join(self.working_dir, "context.bed")
 
 
-    def run(self):
+    def run(self, method):
         csv_to_fasta(self.seq_tab, self.fasta)
-        #csv_to_bed(self.seq_tab, self.bed)
-        build_index(self.cfg, self.fasta, self.working_dir)
+        build_index(self.cfg, self.fasta, self.working_dir, method)
 
 
 def main():
@@ -148,15 +142,14 @@ def main():
     parser = ArgumentParser(description="Generate STAR Index file for sequence CSV")
     parser.add_argument("-i", "--input_file", dest="input_file", help="Specifiy input CSV/TSV with sequence info")
     parser.add_argument("-o", "--output_folder", dest="output_folder", help="Specify output folder to store results into")
+    parser.add_argument("-m", "--method", dest="method", choices=["star", "bowtie2", "bwa"], help="Specify alignment software to generate the index", default="star")
     args = parser.parse_args()
 
     seq_tab = args.input_file
     working_dir = args.output_folder
-    #seq_tab = "/home/sorn/development/ngs_pipelines/easyquant/example_data/CLDN18_Context_seq.tsv"
-    #working_dir = "/home/sorn/development/ngs_pipelines/easyquant/example_out"
 
     ct = CustomTranscriptome(seq_tab, working_dir)
-    ct.run()
+    ct.run(args.method)
 
 if __name__ == "__main__":
     main()

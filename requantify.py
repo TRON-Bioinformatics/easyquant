@@ -2,6 +2,7 @@
 
 from argparse import ArgumentParser
 import csv
+import sys
 
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
@@ -32,6 +33,7 @@ def get_seq_to_pos(seq_table_file):
         # Iterate over input file rows
         for row in reader:
             name = row["name"]
+
             pos_arr = None
             
             if "," in row["position"]:
@@ -64,7 +66,7 @@ def get_reads_from_bam(bam_path):
     for read in bam.fetch():
 
         # ignore umapped reads
-        if read.is_unmapped:
+        if read.is_unmapped or read.flag > 255:
             continue
 
         # get reference sequence name and read name (read group)
@@ -83,7 +85,7 @@ def get_reads_from_bam(bam_path):
     return read_cache
 
 
-def count_reads(seq_to_pos, cache, bp_dist):
+def count_reads_interval(seq_to_pos, cache, bp_dist):
     """
     Count reads and returns a dict seq to count
 
@@ -134,10 +136,12 @@ def count_reads(seq_to_pos, cache, bp_dist):
 
         h = 10
         for read_name in cache[seq_name]:
+
+            if len(cache[seq_name][read_name]) != 2:
+                continue
+
             r1_start, r1_stop, r1_pairs = cache[seq_name][read_name][0]
             r2_start, r2_stop, r2_pairs = cache[seq_name][read_name][1]
-            
-
 
             # iterate over all alignments:
             #for start, stop, pairs in cache[seq_name][read_name]:
@@ -153,6 +157,7 @@ def count_reads(seq_to_pos, cache, bp_dist):
                 #if not r1_class and not r2_class:
                 #    continue
 
+                print("R1", r1_class, r1_start, r1_stop, ref_start, ref_stop)
                 if sum(r1_class):
                     read_dict["1"] = (interval_name, r1_class)
 
@@ -166,6 +171,7 @@ def count_reads(seq_to_pos, cache, bp_dist):
                     if r1_class[1]:
                         counts[seq_name][interval_name][2] += 1
 
+                print("R2", r2_class, r2_start, r2_stop, ref_start, ref_stop)
                 if sum(r2_class):
                     read_dict["2"] = (interval_name, r2_class)
 
@@ -173,7 +179,7 @@ def count_reads(seq_to_pos, cache, bp_dist):
                         cov_perc_dict[seq_name][interval_name][i] = 1
                         cov_mean_dict[seq_name][interval_name][i] += 1
                     # check if read overlaps starting point of interval
-                
+
                     if r2_class[0]:
                         counts[seq_name][interval_name][0] += 1
                     # check if read overlaps stopping point of interval
@@ -181,22 +187,18 @@ def count_reads(seq_to_pos, cache, bp_dist):
                     if r2_class[1]:
                         counts[seq_name][interval_name][2] += 1
 
-            
+            if "1" not in read_dict or "2" not in read_dict:
+                continue
 
 
-                #print("{}: interval={}, start={}, stop={}, read_class={}".format(read_name, interval_name, start, stop, read_class))
-                # update counters
 
-                # check if read maps completely within interval boundaries
-                #if read_class == 3:
-                #    counts[seq_name][interval_name][2] += 1
-            #print(read_dict)
             r1_interval = read_dict["1"][0]
             r2_interval = read_dict["2"][0]
             r1_class = read_dict["1"][1]
             r2_class = read_dict["2"][1]
             r1 = None
             r2 = None
+            # Check if interval of R1 and R2 are different, meaning that there must form a spanning pair
             if r1_interval != r2_interval:
                 counts[seq_name][r1_interval][1] += 1
                 counts[seq_name][r2_interval][1] += 1
@@ -242,6 +244,104 @@ def count_reads(seq_to_pos, cache, bp_dist):
     print(counts)
 
 
+
+    return counts
+
+
+def count_reads(seq_to_pos, cache, bp_dist):
+    """
+    Count reads and returns a dict seq to count
+    returns a dict of reference sequences with a list of read counts:
+        0 junc junction reds overlapping the position with at least bp_dist base pairs
+        1 span spaning pairs are read pairs of which one mate maps to the left and one to the right of pos
+        2 anch maximal overlaping size of junction reads
+        3 a number of reads mapping to the region in the left of pos
+        4 b number of reads mapping to the region in the right of pos
+    """
+
+    # define matche bases for get_aligned_pairs()
+    MATCH_BASES = ['A', 'C', 'G', 'T']
+
+    # counts is a dict from sequence names to an array [junc, span]
+    # initialize counts
+    counts = {}
+    for seq_name in seq_to_pos:
+        counts[seq_name] = [0, 0, 0, 0, 0]
+
+    # iterate over all reference sequences
+    for seq_name in seq_to_pos:
+
+        #print(seq_to_pos[seq_name])
+        if len(seq_to_pos[seq_name]) > 2:
+            print("Specified too many positions of interest in your input file without using the interval mode!")
+            print("Please check your input file or use interval mode!")
+            sys.exit(1)
+
+        pos = seq_to_pos[seq_name][0][2]
+
+        # initialize anchor
+        anchor: int = 0
+
+        # test if there are no reads for this sequence
+        if seq_name not in cache:
+            continue
+
+        # iterate over all reads (read group):
+        for read_name in cache[seq_name]:
+
+            # initialize read_name specific indicators
+            junc = False
+            left = False
+            right = False
+
+            # print(seq_name, read_name, len(cash[seq_name][read_name]))
+
+            # iterate over all alignments:
+            for (start, stop, pairs) in cache[seq_name][read_name]:
+                # read overlaps the position of interest
+                if start <= pos - bp_dist and stop >= pos + bp_dist:
+
+                    # print("DEBUG", seq_name, read_name, aln)
+
+                    # test that read maps exact (or no del/ins) in pos +/- bp_dist
+
+                    reg_start = pos - bp_dist
+                    reg_end = pos + bp_dist - 1
+
+                    q_start = [q for (q, r, s) in pairs if r == reg_start][0]
+                    q_end = [q for (q, r, s) in pairs if r == reg_end][0]
+
+                    # check if boundary postions are aligned and if the stretch length matches on read and reference
+                    no_ins_or_del = q_start is not None and \
+                                    q_end is not None and \
+                                    (q_end - q_start) == (reg_end - reg_start)
+
+                    # test if reference sequence are all capital (means match) acording
+                    # to https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_aligned_pairs
+                    aln_seq = [s for (q, r, s) in pairs if r is not None and reg_start <= r and r < reg_end]
+                    no_snp = all(s in MATCH_BASES for s in aln_seq)
+                    if no_ins_or_del and no_snp:
+                        junc = True
+                        anchor = max(anchor, min(stop - pos, pos - start))
+
+                # read maps left of the position
+                if stop <= pos:
+                    left = True
+                # read maps right of the fusion breakpoint
+                if start >= pos:
+                    right = True
+
+            # update counters
+            if junc: counts[seq_name][0] += 1
+            # check if read pairs map to the left and the right part
+            if left and right: counts[seq_name][1] += 1
+
+            # update counts of left and right regions
+            if left: counts[seq_name][3] += 1
+            if right: counts[seq_name][4] += 1
+
+        # add anchor
+        counts[seq_name][2] = anchor
 
     return counts
 
@@ -294,7 +394,7 @@ def classify_read(aln_start, aln_stop, aln_pairs, ref_start, ref_stop, bp_dist):
     return read_class 
 
 
-def write_counts(in_file, counts, out_file):
+def write_counts_interval(in_file, counts, out_file):
     """
     Write read counts to output file
     """
@@ -334,6 +434,45 @@ def write_counts(in_file, counts, out_file):
                     out_line = "\t".join(sp_out) + "\n"
                     out_handle.write(out_line)
 
+
+def write_counts(in_file, counts, out_file):
+    """
+    Write read counts to output file
+    """
+    
+    # open input file
+    with open(in_file) as csvfile:
+
+        # Auto detect dialect of input file
+        dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
+        csvfile.seek(0)
+        reader = csv.DictReader(csvfile, dialect=dialect)
+        
+        # open output file
+        with open(out_file, "w") as out_handle:
+            
+            # write header line
+            sp_out = ["name", "pos", "junc", "span", "anch", "a", "b"]
+            out_line = "\t".join(sp_out) + "\n"
+            out_handle.write(out_line)
+            
+            # Iterate over input file rows
+            for row in reader:
+                
+                name = row["name"]
+                # sequence = row["sequence"]
+                position = row["position"]
+
+                # get sequence counts
+                seq_counts = counts[name]
+
+                # drob sequence and construct output columns
+                sp_out = [name, position] + [str(c) for c in seq_counts]
+                
+                # write as otput line to output file
+                out_line = "\t".join(sp_out) + "\n"
+                out_handle.write(out_line)
+
     
 
 
@@ -345,6 +484,7 @@ def main():
     parser.add_argument('-o', '--output', dest='output', help='Output file', required=True)
     parser.add_argument('-d', '--bp_distance', dest='bp_distance', type=int, default=10,
                         help='Distance around postion of interest for junction read counts.')
+    parser.add_argument('--interval-mode', dest='interval_mode', action='store_true', help='Specify if interval mode shall be used')
     args = parser.parse_args()
 
     # parse sequence names and position of interest
@@ -354,10 +494,16 @@ def main():
     cache = get_reads_from_bam(bam_path=args.input_bam)
 
     # count reads
-    counts = count_reads(seq_to_pos, cache, bp_dist=args.bp_distance)
-    #print(counts)
-    # write to output file
-    write_counts(args.seq_table_file, counts, args.output)
+    if args.interval_mode:
+        counts = count_reads_interval(seq_to_pos, cache, bp_dist=args.bp_distance)
+    else:
+        counts = count_reads(seq_to_pos, cache, bp_dist=args.bp_distance)
+        #print(counts)
+        # write to output file
+    if args.interval_mode:
+        write_counts_interval(args.seq_table_file, counts, args.output)
+    else:
+        write_counts(args.seq_table_file, counts, args.output)
 
 
 
