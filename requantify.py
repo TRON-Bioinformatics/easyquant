@@ -143,21 +143,13 @@ def count_reads_interval(seq_to_pos, cache, bp_dist):
             r1_start, r1_stop, r1_pairs = cache[seq_name][read_name][0]
             r2_start, r2_stop, r2_pairs = cache[seq_name][read_name][1]
 
-            # iterate over all alignments:
-            #for start, stop, pairs in cache[seq_name][read_name]:
-            #print(r1_start, r1_stop)
-            #print(r2_start, r2_stop)
             read_dict = {}
             # Check in all intervals for an overlap
             for interval_name, ref_start, ref_stop in seq_to_pos[seq_name]:
                 
                 r1_class = classify_read(r1_start, r1_stop, r1_pairs, ref_start, ref_stop, bp_dist)
                 r2_class = classify_read(r2_start, r2_stop, r2_pairs, ref_start, ref_stop, bp_dist)
-                # read overlaps the position of interest
-                #if not r1_class and not r2_class:
-                #    continue
 
-                print("R1", r1_class, r1_start, r1_stop, ref_start, ref_stop)
                 if sum(r1_class):
                     read_dict["1"] = (interval_name, r1_class)
 
@@ -171,26 +163,23 @@ def count_reads_interval(seq_to_pos, cache, bp_dist):
                     if r1_class[1]:
                         counts[seq_name][interval_name][2] += 1
 
-                print("R2", r2_class, r2_start, r2_stop, ref_start, ref_stop)
                 if sum(r2_class):
                     read_dict["2"] = (interval_name, r2_class)
 
                     for i in range(max(r2_start, ref_start), min(r2_stop, ref_stop), 1):
                         cov_perc_dict[seq_name][interval_name][i] = 1
                         cov_mean_dict[seq_name][interval_name][i] += 1
-                    # check if read overlaps starting point of interval
 
+                    # check if read overlaps starting point of interval
                     if r2_class[0]:
                         counts[seq_name][interval_name][0] += 1
-                    # check if read overlaps stopping point of interval
 
+                    # check if read overlaps stopping point of interval
                     if r2_class[1]:
                         counts[seq_name][interval_name][2] += 1
 
             if "1" not in read_dict or "2" not in read_dict:
                 continue
-
-
 
             r1_interval = read_dict["1"][0]
             r2_interval = read_dict["2"][0]
@@ -226,10 +215,7 @@ def count_reads_interval(seq_to_pos, cache, bp_dist):
             #counts[seq_name][2] = anchor
 
         plt.xticks(range(0, 1100, 100))
-        #plt.yticks(range(0, h+10, 10))
-        #plt.show()
         plt.title(seq_name)
-        #fig = plt.show()
         pdf.savefig(fig)
         plt.close()
     pdf.close()
@@ -241,8 +227,6 @@ def count_reads_interval(seq_to_pos, cache, bp_dist):
 
             counts[seq_name][interval_name][3] = cov_perc
             counts[seq_name][interval_name][4] = cov_mean
-    print(counts)
-
 
 
     return counts
@@ -271,7 +255,6 @@ def count_reads(seq_to_pos, cache, bp_dist):
     # iterate over all reference sequences
     for seq_name in seq_to_pos:
 
-        #print(seq_to_pos[seq_name])
         if len(seq_to_pos[seq_name]) > 2:
             print("Specified too many positions of interest in your input file without using the interval mode!")
             print("Please check your input file or use interval mode!")
@@ -294,14 +277,10 @@ def count_reads(seq_to_pos, cache, bp_dist):
             left = False
             right = False
 
-            # print(seq_name, read_name, len(cash[seq_name][read_name]))
-
             # iterate over all alignments:
             for (start, stop, pairs) in cache[seq_name][read_name]:
                 # read overlaps the position of interest
                 if start <= pos - bp_dist and stop >= pos + bp_dist:
-
-                    # print("DEBUG", seq_name, read_name, aln)
 
                     # test that read maps exact (or no del/ins) in pos +/- bp_dist
 
@@ -355,14 +334,11 @@ def classify_read(aln_start, aln_stop, aln_pairs, ref_start, ref_stop, bp_dist):
     # Check if read spans ref start
     if aln_start <= ref_stop - bp_dist and aln_stop >= ref_stop + bp_dist:
         
-
-        # print("DEBUG", seq_name, read_name, aln)
-        
         # test that read maps exact (or no del/ins) in pos +/- bp_dist
 
         reg_start = ref_stop - bp_dist
         reg_end = ref_stop + bp_dist - 1
-        #print(reg_start, reg_end)
+
         q_start = [q for (q, r, s) in aln_pairs if r == reg_start][0]
         q_end = [q for (q, r, s) in aln_pairs if r == reg_end][0]
 
@@ -498,8 +474,7 @@ def main():
         counts = count_reads_interval(seq_to_pos, cache, bp_dist=args.bp_distance)
     else:
         counts = count_reads(seq_to_pos, cache, bp_dist=args.bp_distance)
-        #print(counts)
-        # write to output file
+    # write to output file
     if args.interval_mode:
         write_counts_interval(args.seq_table_file, counts, args.output)
     else:

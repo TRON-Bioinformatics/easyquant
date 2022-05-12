@@ -11,6 +11,9 @@ import sys
 from misc.config import Config
 import misc.io_methods as IOMethods
 
+csv.field_size_limit(sys.maxsize)
+
+
 def csv_to_fasta(csv_in, fasta_out):
     """This function converts the target sequences TSV/CSV file to the FASTA format."""
     outf = open(fasta_out, "w")
