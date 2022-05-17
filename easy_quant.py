@@ -76,6 +76,7 @@ class Easyquant(object):
             sam_file = os.path.join(output_path, "Aligned.sortedByCoord.out.sam")
             bam_file = os.path.join(output_path, "Aligned.sortedByCoord.out.bam")
             quant_file = os.path.join(self.working_dir, "quantification.tsv")
+            read_file = os.path.join(self.working_dir, "read_info.tsv")
 
             if method == "bowtie2":
                 genome_path = os.path.join(self.working_dir, "{}_idx".format(method))
@@ -101,39 +102,57 @@ class Easyquant(object):
 
             elif method == "star":
                 genome_path = os.path.join(self.working_dir, "{}_idx".format(method))
+                #cmd = "{} --outFileNamePrefix {} \
+                #--limitOutSAMoneReadBytes 1000000 \
+                #--genomeDir {} \
+                #--readFilesCommand 'gzip -d -c -f' \
+                #--readFilesIn {} {} \
+                #--outSAMmode Full \
+                #--outFilterMultimapNmax 1000 \
+                #--alignIntronMin 0 \
+                #--outSAMattributes NH HI AS nM NM MD \
+                #--outSAMunmapped Within \
+                #--outSAMtype BAM SortedByCoordinate \
+                #--runThreadN 12 && \
+                #{} index {}".format(self.cfg.get('commands','star_cmd'), 
+                #                    output_path + "/",
+                #                    genome_path, 
+                #                    file_1, 
+                #                    file_2,
+                #                    self.cfg.get('commands', 'samtools_cmd'), 
+                #                    bam_file)
+
                 cmd = "{} --outFileNamePrefix {} \
                 --limitOutSAMoneReadBytes 1000000 \
                 --genomeDir {} \
                 --readFilesCommand 'gzip -d -c -f' \
                 --readFilesIn {} {} \
                 --outSAMmode Full \
-                --outFilterMultimapNmax 1000 \
-                --alignIntronMin 0 \
+                --outFilterMultimapNmax -1 \
                 --outSAMattributes NH HI AS nM NM MD \
-                --outSAMunmapped Within \
+                --outSAMunmapped None \
+                --outFilterMismatchNoverLmax 0.05 \
+                --outFilterMismatchNoverReadLmax 0.05 \
                 --outSAMtype BAM SortedByCoordinate \
                 --runThreadN 12 && \
-                {} index {}".format(self.cfg.get('commands','star_cmd'), 
-                                    output_path + "/",
-                                    genome_path, 
-                                    file_1, 
-                                    file_2,
-                                    self.cfg.get('commands', 'samtools_cmd'), 
-                                    bam_file)
-
+                {} index {}".format(self.cfg.get('commands','star_cmd'), output_path + "/",
+                                genome_path, file_1, file_2,
+                                self.cfg.get('commands', 'samtools_cmd'), bam_file)
 
             if self.interval_mode:
-                cmd_class = "{} -i {} -t {} -d {} -o {} --interval-mode".format(self.cfg.get('commands', 'classification_cmd'),
-                                                                                bam_file,
-                                                                                self.seq_tab,
-                                                                                self.bp_distance,
-                                                                                quant_file)
+                cmd_class = "{} -i {} -t {} -d {} -o {} -r {} --interval-mode".format(self.cfg.get('commands', 'classification_cmd'),
+                                                                                      bam_file,
+                                                                                      self.seq_tab,
+                                                                                      self.bp_distance,
+                                                                                      quant_file,
+                                                                                      read_file)
             else:
-                cmd_class = "{} -i {} -t {} -d {} -o {}".format(self.cfg.get('commands', 'classification_cmd'),
-                                                                                bam_file,
-                                                                                self.seq_tab,
-                                                                                self.bp_distance,
-                                                                                quant_file)
+                cmd_class = "{} -i {} -t {} -d {} -o {} -r {}".format(self.cfg.get('commands', 'classification_cmd'),
+                                                                      bam_file,
+                                                                      self.seq_tab,
+                                                                      self.bp_distance,
+                                                                      quant_file,
+                                                                      read_file)
     
             out_shell.write("#!/bin/sh\n\n")
             out_shell.write("fq1={}\n".format(file_1))
