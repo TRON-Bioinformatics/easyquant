@@ -121,7 +121,7 @@ def count_reads(seq_to_pos, cache, bp_dist, reads_file, interval_mode):
 
     # Open file for read info
     reads_out = open(reads_file, "w")
-
+    
     # counts is a dict from sequence names to an array [junc, span]
     # initialize counts
     counts, cov_perc_dict, cov_mean_dict = init_counts(seq_to_pos, interval_mode)
@@ -146,16 +146,15 @@ def count_reads(seq_to_pos, cache, bp_dist, reads_file, interval_mode):
 
         # initialize anchor
         anchor: int = 0
-
         # iterate over all reads (read group):
         for read_name in cache[seq_name]:
-
             if len(cache[seq_name][read_name]) != 2:
                 continue
                 
             r1_start, r1_stop, r1_pairs = cache[seq_name][read_name][0]
             r2_start, r2_stop, r2_pairs = cache[seq_name][read_name][1]
 
+            # Get read information [junc, within, interval]
             r1_info = classify_read(r1_start, r1_stop, r1_pairs, seq_to_pos[seq_name], bp_dist)
             r2_info = classify_read(r2_start, r2_stop, r2_pairs, seq_to_pos[seq_name], bp_dist)
 
@@ -163,7 +162,8 @@ def count_reads(seq_to_pos, cache, bp_dist, reads_file, interval_mode):
             
             r1_type = ""
             r2_type = ""
-
+            left = False
+            right = False
             if r1_info["interval"]:
                 interval_name = r1_info["interval"]
                 if interval_mode:
@@ -184,10 +184,13 @@ def count_reads(seq_to_pos, cache, bp_dist, reads_file, interval_mode):
                     if interval_mode:
                         counts[seq_name][interval_name][2] += 1
                     else:
+                        #print(interval_name, right_interval)
                         if interval_name == left_interval:
-                            counts[seq_name][3] += 1
+                            left = True
+                            #counts[seq_name][3] += 1
                         elif interval_name == right_interval:
-                            counts[seq_name][4] += 1
+                            right = True
+                            #counts[seq_name][4] += 1
                     r1_type = "within"
 
 
@@ -211,9 +214,11 @@ def count_reads(seq_to_pos, cache, bp_dist, reads_file, interval_mode):
                         counts[seq_name][interval_name][2] += 1
                     else:
                         if interval_name == left_interval:
-                            counts[seq_name][3] += 1
+                            left = True
+                            #counts[seq_name][3] += 1
                         elif interval_name == right_interval:
-                            counts[seq_name][4] += 1
+                            right = True
+                            #counts[seq_name][4] += 1
                     r2_type = "within"
 
 
@@ -227,6 +232,12 @@ def count_reads(seq_to_pos, cache, bp_dist, reads_file, interval_mode):
                 r1_type = "span"
                 r2_type = "span"
 
+            if left:
+                counts[seq_name][3] += 1
+
+            if right:
+                counts[seq_name][4] += 1
+
             if not r1_type:
                 r1_type = "softjunc"
             if not r2_type:
@@ -234,12 +245,10 @@ def count_reads(seq_to_pos, cache, bp_dist, reads_file, interval_mode):
             reads_out.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(read_name, "R1", seq_name, r1_start, r1_stop, r1_type))
             reads_out.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(read_name, "R2", seq_name, r2_start, r2_stop, r2_type))
 
-        
         # add anchor
         if not interval_mode:
             counts[seq_name][2] = anchor
 
-        #print(seq_name, n)
     if interval_mode:
         for seq_name in seq_to_pos:
             for interval_name, ref_start, ref_stop in seq_to_pos[seq_name]:
