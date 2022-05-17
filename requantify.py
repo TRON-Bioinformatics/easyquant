@@ -188,7 +188,7 @@ def count_reads(seq_to_pos, cache, bp_dist, reads_file, interval_mode):
                             counts[seq_name][3] += 1
                         elif interval_name == right_interval:
                             counts[seq_name][4] += 1
-                    r1_within = True
+                    r1_type = "within"
 
 
             if r2_info["interval"]:
@@ -214,7 +214,7 @@ def count_reads(seq_to_pos, cache, bp_dist, reads_file, interval_mode):
                             counts[seq_name][3] += 1
                         elif interval_name == right_interval:
                             counts[seq_name][4] += 1
-                    r2_within = True
+                    r2_type = "within"
 
 
             # Check if r1 and r2 form a spanning pair
@@ -227,6 +227,10 @@ def count_reads(seq_to_pos, cache, bp_dist, reads_file, interval_mode):
                 r1_type = "span"
                 r2_type = "span"
 
+            if not r1_type:
+                r1_type = "softjunc"
+            if not r2_type:
+                r2_type = "softjunc"
             reads_out.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(read_name, "R1", seq_name, r1_start, r1_stop, r1_type))
             reads_out.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(read_name, "R2", seq_name, r2_start, r2_stop, r2_type))
 
