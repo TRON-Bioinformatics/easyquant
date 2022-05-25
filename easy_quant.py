@@ -73,54 +73,33 @@ class Easyquant(object):
         cmd = ""
         # start to write shell script to execute mapping cmd
         with open(shell_script, "w") as out_shell:
-            sam_file = os.path.join(output_path, "Aligned.sortedByCoord.out.sam")
+            sam_file = os.path.join(output_path, "Aligned.out.sam")
             bam_file = os.path.join(output_path, "Aligned.sortedByCoord.out.bam")
             quant_file = os.path.join(self.working_dir, "quantification.tsv")
-            read_file = os.path.join(self.working_dir, "read_info.tsv")
+            #read_file = os.path.join(self.working_dir, "read_info.tsv")
 
             if method == "bowtie2":
                 genome_path = os.path.join(self.working_dir, "{}_idx".format(method))
-                cmd = "{0} -x {1}/bowtie -1 {2} -2 {3} | \
-                {4} sort -o {5} - && \
-                {4} index {5}".format(self.cfg.get('commands', 'bowtie2_cmd'), 
-                                      genome_path, 
-                                      file_1, 
-                                      file_2, 
-                                      self.cfg.get('commands', 'samtools_cmd'), 
-                                      bam_file)
+                cmd = "{0} -x {1}/bowtie -1 {2} -2 {3} -S {4}".format(
+                    self.cfg.get('commands', 'bowtie2_cmd'),
+                    genome_path,
+                    file_1,
+                    file_2,
+                    sam_file
+                )
 
             elif method == "bwa":
                 genome_path = os.path.join(self.working_dir, "context.fa")
-                cmd = "{0} mem {1} {2} {3} | \
-                {4} sort -o {5} - && \
-                {4} index {5}".format(self.cfg.get('commands', 'bwa_cmd'), 
-                                      genome_path, 
-                                      file_1, 
-                                      file_2, 
-                                      self.cfg.get('commands', 'samtools_cmd'), 
-                                      bam_file)
+                cmd = "{0} mem {1} {2} {3} > {4}".format(
+                    self.cfg.get('commands', 'bwa_cmd'), 
+                    genome_path, 
+                    file_1, 
+                    file_2, 
+                    sam_file
+                )
 
             elif method == "star":
                 genome_path = os.path.join(self.working_dir, "{}_idx".format(method))
-                #cmd = "{} --outFileNamePrefix {} \
-                #--limitOutSAMoneReadBytes 1000000 \
-                #--genomeDir {} \
-                #--readFilesCommand 'gzip -d -c -f' \
-                #--readFilesIn {} {} \
-                #--outSAMmode Full \
-                #--outFilterMultimapNmax 1000 \
-                #--alignIntronMin 0 \
-                #--outSAMattributes NH HI AS nM NM MD \
-                #--outSAMunmapped Within \
-                #--outSAMtype BAM SortedByCoordinate \
-                #--runThreadN 12 && \
-                #{} index {}".format(self.cfg.get('commands','star_cmd'), 
-                #                    output_path + "/",
-                #                    genome_path, 
-                #                    file_1, 
-                #                    file_2,
-                #                    self.cfg.get('commands', 'samtools_cmd'), 
-                #                    bam_file)
 
                 cmd = "{} --outFileNamePrefix {} \
                 --limitOutSAMoneReadBytes 1000000 \
@@ -133,26 +112,26 @@ class Easyquant(object):
                 --outSAMunmapped None \
                 --outFilterMismatchNoverLmax 0.05 \
                 --outFilterMismatchNoverReadLmax 0.05 \
-                --outSAMtype BAM SortedByCoordinate \
-                --runThreadN 12 && \
-                {} index {}".format(self.cfg.get('commands','star_cmd'), output_path + "/",
-                                genome_path, file_1, file_2,
-                                self.cfg.get('commands', 'samtools_cmd'), bam_file)
+                --runThreadN 12".format(self.cfg.get('commands','star_cmd'), 
+                                        output_path + "/", genome_path, 
+                                        file_1, file_2)
 
             if self.interval_mode:
-                cmd_class = "{} -i {} -t {} -d {} -o {} -r {} --interval-mode".format(self.cfg.get('commands', 'classification_cmd'),
-                                                                                      bam_file,
-                                                                                      self.seq_tab,
-                                                                                      self.bp_distance,
-                                                                                      quant_file,
-                                                                                      read_file)
+                cmd_class = "{} -i {} -t {} -d {} -o {} --interval-mode".format(
+                    self.cfg.get('commands', 'classification_cmd'),
+                    sam_file,
+                    self.seq_tab,
+                    self.bp_distance,
+                    self.working_dir
+                )
             else:
-                cmd_class = "{} -i {} -t {} -d {} -o {} -r {}".format(self.cfg.get('commands', 'classification_cmd'),
-                                                                      bam_file,
-                                                                      self.seq_tab,
-                                                                      self.bp_distance,
-                                                                      quant_file,
-                                                                      read_file)
+                cmd_class = "{} -i {} -t {} -d {} -o {}".format(
+                    self.cfg.get('commands', 'classification_cmd'),
+                    sam_file,
+                    self.seq_tab,
+                    self.bp_distance,
+                    self.working_dir
+                )
     
             out_shell.write("#!/bin/sh\n\n")
             out_shell.write("fq1={}\n".format(file_1))
@@ -167,7 +146,7 @@ class Easyquant(object):
                 out_shell.write("{}\n".format(cmd_class))
             out_shell.write("echo \"Processing done!\"\n")
 
-        if not os.path.exists(bam_file):
+        if not os.path.exists(sam_file):
             self.execute_cmd(cmd)
 
         if not os.path.exists(quant_file):

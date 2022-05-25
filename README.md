@@ -123,30 +123,30 @@ The output of the example data `<OUTPUT_FOLDER>/quantification.tsv` should look 
 
 | name          | pos | junc | span | anch | a    | b    |
 |:--------------|----:|-----:|-----:|-----:|-----:|-----:|
-| CLDN18_1      | 400 | 570  | 689  | 25   | 1096 | 2497 |
-| CLDN18_2      | 361 | 0    | 1    | 0    | 1    | 1529 |
-| CLDN18_total  | 400 | 596  | 689  | 25   | 2770 | 3467 |
-| CLDN18_1_fake | 400 | 2    | 3    | 14   | 5    | 2425 |
-| CLDN18_2_fake | 361 | 0    | 0    | 0    | 0    | 2420 |
-| HPRT1         | 400 | 107  | 216  | 25   | 848  | 686  |
+| CLDN18_1      | 400 | 570  | 689  | 25   | 1116 | 3989 |
+| CLDN18_2      | 361 | 0    | 1    | 0    | 1    | 3021 |
+| CLDN18_total  | 400 | 596  | 689  | 25   | 4373 | 5803 |
+| CLDN18_1_fake | 400 | 2    | 3    | 14   | 5    | 4761 |
+| CLDN18_2_fake | 361 | 0    | 0    | 0    | 0    | 4756 |
+| HPRT1         | 400 | 107  | 216  | 25   | 1400 | 1021 |
 
 
 Using the interval mode the output will look slightly different:
 
-| name          | interval | overlap_stop | span_read | within_interval | coverage_perc | coverage_mean |
-|:--------------|---------:|-------------:|----------:|----------------:|--------------:|--------------:|
-| CLDN18_1      | 0_400    | 570          | 969       | 1191            | 0.89          | 191.9775      |
-| CLDN18_1      | 400_786  | 0            | 969       | 3817            | 1.0           | 508.342       |
-| CLDN18_2      | 0_361    | 0            | 1         | 1               | 0.141         | 0.141         |
-| CLDN18_2      | 361_747  | 0            | 1         | 75              | 0.953         | 9.513         |
-| CLDN18_total  | 0_400    | 596          | 1097      | 1624            | 1.0           | 244.4125      |
-| CLDN18_total  | 400_786  | 0            | 1097      | 1409            | 1.0           | 183.847       |
-| CLDN18_1_fake | 0_400    | 2            | 5         | 5               | 0.2525        | 0.705         |
-| CLDN18_1_fake | 400_786  | 0            | 5         | 4199            | 1.0           | 548.430       |
-| CLDN18_2_fake | 0_361    | 0            | 0         | 0               | 0.0           | 0.0           |
-| CLDN18_2_fake | 361_747  | 0            | 0         | 356             | 1.0           | 41.003        |
-| HPRT1         | 0_400    | 107          | 341       | 1443            | 1.0           | 187.12        |
-| HPRT1         | 400_793  | 0            | 341       | 1082            | 1.0           | 138.483       |
+| name          | interval | overlap_interval_end_reads | span_interval_end_pairs | within_interval | coverage_perc | coverage_mean |
+|:--------------|---------:|---------------------------:|------------------------:|----------------:|--------------:|--------------:|
+| CLDN18_1      | 0_400    | 570                        | 689                     | 1116            | 0.89          | 183.38        |
+| CLDN18_1      | 400_786  | 0                          | 0                       | 3989            | 1.0           | 530.74        |
+| CLDN18_2      | 0_361    | 0                          | 1                       | 1               | 0.14          | 0.14          |
+| CLDN18_2      | 361_747  | 0                          | 0                       | 3021            | 1.0           | 402.0         |
+| CLDN18_total  | 0_400    | 596                        | 689                     | 4373            | 1.0           | 599.54        |
+| CLDN18_total  | 400_786  | 0                          | 0                       | 5803            | 1.0           | 754.26        |
+| CLDN18_1_fake | 0_400    | 2                          | 3                       | 5               | 0.25          | 0.71          |
+| CLDN18_1_fake | 400_786  | 0                          | 0                       | 4761            | 1.0           | 616.93        |
+| CLDN18_2_fake | 0_361    | 0                          | 0                       | 0               | 0.0           | 0.0           |
+| CLDN18_2_fake | 361_747  | 0                          | 0                       | 4756            | 1.0           | 616.27        |
+| HPRT1         | 0_400    | 107                        | 216                     | 1400            | 1.0           | 182.21        |
+| HPRT1         | 400_793  | 0                          | 0                       | 1021            | 1.0           | 131.49        |
 
 
 
@@ -167,8 +167,8 @@ Using the interval mode the output will look slightly different:
 
  - **name**   name of the input sequence
  - **interval** interval of interest relative to input sequence
- - **overlap_stop** reads overlapping the end of the respective interval
- - **span_read** reads pairing with a read of a different interval
+ - **overlap_interval_end_reads** reads overlapping the end of the interval by at least `BP_DISTANCE` bases
+ - **span_interval_end_pairs** read pairs spanning the end of the interval
  - **within_interval** reads mapping fully onto the interval
  - **coverage_perc** percentual coverage of the interval by aligned reads
  - **coverage_mean** average coverage per base for the interval (fold coverage)
