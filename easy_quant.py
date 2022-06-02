@@ -107,6 +107,7 @@ class Easyquant(object):
                 --readFilesCommand 'gzip -d -c -f' \
                 --readFilesIn {} {} \
                 --outSAMmode Full \
+                --alignEndsType EndToEnd \
                 --outFilterMultimapNmax -1 \
                 --outSAMattributes NH HI AS nM NM MD \
                 --outSAMunmapped None \
@@ -115,6 +116,8 @@ class Easyquant(object):
                 --runThreadN 12".format(self.cfg.get('commands','star_cmd'), 
                                         output_path + "/", genome_path, 
                                         file_1, file_2)
+
+
 
             if self.interval_mode:
                 cmd_class = "{} -i {} -t {} -d {} -o {} --interval-mode".format(

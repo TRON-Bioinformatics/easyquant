@@ -16,6 +16,23 @@ logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def perc_true(lst):
+    n = len(lst)
+    num_true = sum(1 for val in lst if val > 0)
+    return float(num_true)/n
+
+
+def mean(lst):
+    n = len(lst)
+    return float(sum(lst))/n
+
+
+def median(lst):
+    n = len(lst)
+    s = sorted(lst)
+    return (s[n//2-1]/2.0+s[n//2]/2.0, float(s[n//2]))[n % 2] if n else None
+
+
 def get_seq_to_pos(seq_table_file):
     """
     Parses the sequence table and returns a dict where each sequence name is mapped to intervals
@@ -111,7 +128,7 @@ class Quantification(object):
         self.bp_dist = bp_dist
         self.interval_mode = interval_mode
         self.seq_to_pos = get_seq_to_pos(seq_table_file)
-        self.counts, self.cov_perc_dict, self.cov_mean_dict = self.init_counts(self.seq_to_pos)
+        self.counts, self.cov_dict = self.init_counts(self.seq_to_pos)
         self.parse_alignment()
         self.reads_out.close()
         self.write_results()
@@ -124,23 +141,19 @@ class Quantification(object):
 
         logger.info("Initializing count dicts.")
         counts = {}
-        cov_perc_dict = {}
-        cov_mean_dict = {}
+        cov_dict = {}
         for seq_name in seq_to_pos:
 
             if self.interval_mode:
                 counts[seq_name] = {}
-                cov_perc_dict[seq_name] = {}
-                cov_mean_dict[seq_name] = {}
+                cov_dict[seq_name] = {}
                 for interval_name, ref_start, ref_stop in seq_to_pos[seq_name]:
-                    # junc, span_read, within, coverage_%, coverage_mean
-                    counts[seq_name][interval_name] = [0, 0, 0, 0, 0]
+                    # junc, span_read, within, coverage_%, coverage_mean, coverage_median
+                    counts[seq_name][interval_name] = [0, 0, 0, 0, 0, 0]
 
-                    cov_perc_dict[seq_name][interval_name] = {}
-                    cov_mean_dict[seq_name][interval_name] = {}
+                    cov_dict[seq_name][interval_name] = {}
                     for i in range(ref_start, ref_stop, 1):
-                        cov_perc_dict[seq_name][interval_name][i] = 0
-                        cov_mean_dict[seq_name][interval_name][i] = 0
+                        cov_dict[seq_name][interval_name][i] = 0
             else:
 
                 if len(seq_to_pos[seq_name]) > 2:
@@ -150,7 +163,7 @@ class Quantification(object):
 
                 counts[seq_name] = [0, 0, 0, 0, 0]
 
-        return counts, cov_perc_dict, cov_mean_dict
+        return counts, cov_dict
 
 
     def parse_alignment(self):
@@ -174,7 +187,8 @@ class Quantification(object):
                 
 
             if r1 and r2:
-                # Ignore unmapped reads
+                # Ignore unmapped reads and read pairs 
+                # with unmatching reference or read name
                 if not (r1.is_unmapped or r2.is_unmapped or
                     r1.query_name != r2.query_name or
                     r1.reference_name != r2.reference_name):
@@ -186,11 +200,13 @@ class Quantification(object):
         if self.interval_mode:
             for seq_name in self.seq_to_pos:
                 for interval_name, ref_start, ref_stop in self.seq_to_pos[seq_name]:
-                    cov_perc = float(sum(self.cov_perc_dict[seq_name][interval_name].values()))/(ref_stop - ref_start)
-                    cov_mean = float(sum(self.cov_mean_dict[seq_name][interval_name].values()))/(ref_stop - ref_start)
+                    cov_perc = perc_true(self.cov_dict[seq_name][interval_name].values())
+                    cov_mean = mean(self.cov_dict[seq_name][interval_name].values())
+                    cov_median = median(self.cov_dict[seq_name][interval_name].values())
 
                     self.counts[seq_name][interval_name][3] = cov_perc
                     self.counts[seq_name][interval_name][4] = cov_mean
+                    self.counts[seq_name][interval_name][5] = cov_median
 
 
     def quantify(self, r1, r2):
@@ -242,9 +258,9 @@ class Quantification(object):
             interval_name = r1_info["interval"]
             if self.interval_mode:
                 ref_start, ref_stop = interval_name.split("_")
-                for i in range(max(r1_start, int(ref_start)), min(r1_stop, int(ref_stop)), 1):
-                    self.cov_perc_dict[seq_name][interval_name][i] = 1
-                    self.cov_mean_dict[seq_name][interval_name][i] += 1
+                for q, r, s in r1_pairs:
+                    if q != None and r != None and int(ref_start) <= r < int(ref_stop):
+                        self.cov_dict[seq_name][interval_name][r] += 1
 
             # Check if reads are junction reads
             if r1_info["junc"]:
@@ -269,9 +285,10 @@ class Quantification(object):
             interval_name = r2_info["interval"]
             if self.interval_mode:
                 ref_start, ref_stop = interval_name.split("_")
-                for i in range(max(r2_start, int(ref_start)), min(r2_stop, int(ref_stop)), 1):
-                    self.cov_perc_dict[seq_name][interval_name][i] = 1
-                    self.cov_mean_dict[seq_name][interval_name][i] += 1
+                for q, r, s in r2_pairs:
+                    if q != None and r != None and int(ref_start) <= r < int(ref_stop):
+                        self.cov_dict[seq_name][interval_name][r] += 1
+
 
             if r2_info["junc"]:
                 if self.interval_mode:
@@ -294,11 +311,6 @@ class Quantification(object):
         # Check if r1 and r2 form a spanning pair
         if r1_info["within"] and r2_info["within"] and r1_info["interval"] != r2_info["interval"]:
             if self.interval_mode:
-                # TODO: Apply counting scheme for spanning positions
-                # |    A     |     B     |     C     |
-                # |   -->    |    <--    |           |
-                # |  -->     |           |   <--     |
-                # A: 2, B: 1, C: 0
 
                 start = False
                 spanning_intervals = []
@@ -312,8 +324,6 @@ class Quantification(object):
                         spanning_intervals.append(interval_name)
                 for interval_name in spanning_intervals:
                     self.counts[seq_name][interval_name][1] += 1                        
-                #self.counts[seq_name][r1_info["interval"]][1] += 1
-                #self.counts[seq_name][r2_info["interval"]][1] += 1
             else:
                 self.counts[seq_name][1] += 1
             r1_type = "span"
@@ -353,7 +363,7 @@ class Quantification(object):
             if self.interval_mode:
                 sp_out = ["name", "interval", "overlap_interval_end_reads", 
                           "span_interval_end_pairs", "within_interval", 
-                          "coverage_perc", "coverage_mean"]
+                          "coverage_perc", "coverage_mean", "coverage_median"]
             else:
                 sp_out = ["name", "pos", "junc", "span", "anch", "a", "b"]
             out_line = "\t".join(sp_out) + "\n"
@@ -391,7 +401,6 @@ def main():
     parser.add_argument('-o', '--output_path', dest='output_path', help='Output path where results are stored', default="test_out")
     parser.add_argument('-d', '--bp_distance', dest='bp_distance', type=int, default=10,
                         help='Distance around postion of interest for junction read counts.')
-    #parser.add_argument('-r', '--reads_file', dest='reads_file', help='Specify file to store reads information to for later plotting', default='reads.tsv')
     parser.add_argument('--interval-mode', dest='interval_mode', action='store_true', help='Specify if interval mode shall be used')
     args = parser.parse_args()
 
