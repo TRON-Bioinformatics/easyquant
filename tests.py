@@ -2,18 +2,21 @@
 
 import unittest
 
-from easy_quant import get_fastq_files, pair_fastq_files
+from requantify import perc_true, mean, median
 
-class TestIOMethods(unittest.TestCase):
+class TestRequantify(unittest.TestCase):
 
-    def test_get_fastqs(self):
-        pass
+    def test_perc_true(self):
+        data = [4, 3, 0, 5, 9, 0, 1, 0, 0, 0]
+        self.assertEqual(perc_true(data), 0.5)
 
-    def test_pair_fastqs(self):
-        self.assertEqual(pair_fastq_files(["/a/b/c/test_R1.fastq.gz", "/a/b/c/test_R2.fastq.gz"]), (["/a/b/c/test_R1.fastq.gz"], ["/a/b/c/test_R2.fastq.gz"], ["test"]))
+    def test_mean(self):
+        data = [4, 3, 0, 5, 9, 0, 1, 0, 0, 0]
+        self.assertEqual(mean(data), 2.2)
 
-        self.assertEqual(pair_fastq_files(["/a/b/c/test.R1.fastp.fastq.gz", "/a/b/c/test.R2.fastp.fastq.gz"]), (["/a/b/c/test.R1.fastp.fastq.gz"], ["/a/b/c/test.R2.fastp.fastq.gz"], ["test"]))
-
+    def test_median(self):
+        data = [4, 3, 0, 5, 9, 0, 1, 0, 0, 0]
+        self.assertEqual(median(data), 0.5)
 
 if __name__ == "__main__":
     unittest.main()
