@@ -1,12 +1,9 @@
 [general]
-queueing_system=slurm
-
-# Define ressource usage (cpu,ram):
-[resources]
-star=6,40
-bowtie=6,10
+version=0.4.0
 
 [commands]
-samtools_cmd=/path/to/samtools/1.9/samtools
-star_cmd=/path/to/STAR/2.6.1d/bin/Linux_x86_64_static/STAR
-classification_cmd=/path/to/easyquant/requantify.py
+samtools=/path/to/samtools
+star=/path/to/STAR
+bwa=/path/to/bwa
+bowtie2=/path/to/bowtie2
+quantification=/path/to/easyquant/requantify.py

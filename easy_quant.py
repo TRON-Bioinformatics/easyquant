@@ -1,195 +1,207 @@
 #!/usr/bin/env python
 
 from argparse import ArgumentParser
-import csv
-import grp
+from configparser import ConfigParser
+import logging
 import math
 import os
-import pwd
-import re
-import stat
 import subprocess
 import sys
-import time
 
-
-from misc.config import Config
-import misc.io_methods as IOMethods
-from custom_transcriptome import CustomTranscriptome
+import io_methods as IOMethods
 
 
 
 class Easyquant(object):
     
-    def __init__(self, cfg, input_paths, seq_tab, bp_distance, working_dir, interval_mode):
-        
-        self.cfg = cfg
-        self.input_paths = []
-        for path in input_paths:
-            self.input_paths.append(path.rstrip("/"))
-        self.seq_tab = seq_tab
-        self.bp_distance = bp_distance
-        self.working_dir = working_dir.rstrip("/")
+    def __init__(self, fq1, fq2, seq_tab, bp_distance, working_dir, interval_mode):
+
+        self.working_dir = os.path.abspath(working_dir)
         IOMethods.create_folder(self.working_dir)
+
+        logfile = os.path.join(self.working_dir, 'run.log')
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[
+                logging.FileHandler(logfile),
+                logging.StreamHandler()
+            ]
+        )
+
+
+        cfg_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini")
+        if not os.path.exists(cfg_file):
+            logging.error("Config file does not exist! Please move and update your config file")
+            logging.error("mv config.ini.sample config.ini -> edit")
+            sys.exit(1)
+
+        self.cfg = ConfigParser()
+        self.cfg.read(cfg_file)
+        self.fq1 = os.path.abspath(fq1)
+        self.fq2 = os.path.abspath(fq2)
+        self.seq_tab = os.path.abspath(seq_tab)
+        self.bp_distance = bp_distance
         self.interval_mode = interval_mode
 
 
     def run(self, method):
-        """This function starts processing of the samples."""
-
-        ct = CustomTranscriptome(self.seq_tab, self.working_dir)
-        ct.run(method)
-        
-        fastqs = IOMethods.get_fastq_files(self.input_paths)
-        file_array = sorted(fastqs)
-        print("INFO: Fastq files: {}".format(file_array))
-
-        sample_list = IOMethods.pair_fastq_files(fastqs)
-
-        for sample in sample_list:
-            print("INFO: Processing Sample ID: {} (paired end)".format(sample[0]))
-            print("INFO:    Sample 1: {}".format(sample[1]))
-            print("INFO:    Sample 2: {}".format(sample[2]))
-            self.execute_pipeline(sample[1], sample[2], method)
-
-
-    def execute_pipeline(self, file_1, file_2, method):
         """This function runs the pipeline on paired-end FASTQ files."""
-        print("INFO: Execute pipeline on {} {}".format(file_1, file_2))
+
+
+        script_call = "python {} {}".format(os.path.realpath(__file__), " ".join(sys.argv[1:]))
         
+        with open(os.path.join(self.working_dir, "run_command.sh"), "w") as outf:
+            outf.write("#!/bin/sh\n\n")
+            outf.write("version=\"{}\"\n".format(self.cfg.get("general", "version")))
+            outf.write("python {} \\\n".format(os.path.realpath(__file__)))
+            outf.write("-1 {} \\\n".format(self.fq1))
+            outf.write("-2 {} \\\n".format(self.fq2))
+            outf.write("-s {} \\\n".format(self.seq_tab))
+            outf.write("-o {} \\\n".format(self.working_dir))
+            outf.write("-d {} \\\n".format(self.bp_distance))
+            outf.write("-m {} \\\n".format(method))
+            if self.interval_mode:
+                outf.write("--interval-mode")
 
 
-        output_path = os.path.join(self.working_dir, method)
+        logging.info("Executing easyquant {}".format(self.cfg.get("general", "version")))
+        logging.info("FQ1={}".format(self.fq1))
+        logging.info("FQ2={}".format(self.fq2))
+
+        genome_path = os.path.join(self.working_dir, "index")
+        align_path = os.path.join(self.working_dir, "alignment")
+
+        fasta_file = os.path.join(self.working_dir, "context.fa")
+        sam_file = os.path.join(align_path, "Aligned.out.sam")
+        quant_file = os.path.join(self.working_dir, "quantification.tsv")
+
         
-        # create folder
+        #create folders
+        IOMethods.create_folder(genome_path)
+        IOMethods.create_folder(align_path)
 
-        if not os.path.exists(output_path):
-            print("INFO: Creating folder: {}".format(output_path))
-            os.makedirs(output_path)
+        IOMethods.csv_to_fasta(self.seq_tab, fasta_file)
 
-        
+        index_cmd = None
+        align_cmd = None
+        quant_cmd = None
+
+
+        if method == "bowtie2":
+            index_cmd = "{}-build {} {}/bowtie".format(self.cfg.get('commands', 'bowtie2'), fasta_file, genome_path)
+            align_cmd = "{0} -x {1}/bowtie -1 {2} -2 {3} -S {4}".format(
+                self.cfg.get('commands', 'bowtie2'),
+                genome_path,
+                self.fq1,
+                self.fq2,
+                sam_file
+            )
+
+        elif method == "bwa":
+            genome_path = fasta_file
+            index_cmd = "{} index {}".format(self.cfg.get('commands', 'bwa'), fasta_file)
+            align_cmd = "{0} mem {1} {2} {3} > {4}".format(
+                self.cfg.get('commands', 'bwa'), 
+                genome_path, 
+                self.fq1, 
+                self.fq2, 
+                sam_file
+            )
+
+        elif method == "star":
+            fasta_size = IOMethods.get_fasta_size(fasta_file)
+            sa_index_nbases = min(14, max(4, int(math.log(fasta_size) / 2 - 1)))
+            index_cmd = "{} --runMode genomeGenerate \
+            --limitGenomeGenerateRAM 40000000000 \
+            --runThreadN 12 \
+            --genomeSAindexNbases {} \
+            --genomeDir {} \
+            --genomeFastaFiles {}".format(self.cfg.get('commands','star'), 
+                                          sa_index_nbases, genome_path, fasta_file)
+
+            align_cmd = "{} --outFileNamePrefix {} \
+            --limitOutSAMoneReadBytes 1000000 \
+            --genomeDir {} \
+            --readFilesCommand 'gzip -d -c -f' \
+            --readFilesIn {} {} \
+            --outSAMmode Full \
+            --alignEndsType EndToEnd \
+            --outFilterMultimapNmax -1 \
+            --outSAMattributes NH HI AS nM NM MD \
+            --outSAMunmapped None \
+            --outFilterMismatchNoverLmax 0.05 \
+            --outFilterMismatchNoverReadLmax 0.05 \
+            --runThreadN 12".format(self.cfg.get('commands','star'), 
+                                    align_path + "/", genome_path, 
+                                    self.fq1, self.fq2)
+
+
+
+        if self.interval_mode:
+            quant_cmd = "{} -i {} -t {} -d {} -o {} --interval-mode".format(
+                self.cfg.get('commands', 'quantification'),
+                sam_file,
+                self.seq_tab,
+                self.bp_distance,
+                self.working_dir
+            )
+        else:
+            quant_cmd = "{} -i {} -t {} -d {} -o {}".format(
+                self.cfg.get('commands', 'quantification'),
+                sam_file,
+                self.seq_tab,
+                self.bp_distance,
+                self.working_dir
+            )
+
+
         # define bash script in working directory    
         shell_script = os.path.join(self.working_dir, "requant.sh")
-        cmd = ""
         # start to write shell script to execute mapping cmd
         with open(shell_script, "w") as out_shell:
-            sam_file = os.path.join(output_path, "Aligned.out.sam")
-            bam_file = os.path.join(output_path, "Aligned.sortedByCoord.out.bam")
-            quant_file = os.path.join(self.working_dir, "quantification.tsv")
-            #read_file = os.path.join(self.working_dir, "read_info.tsv")
-
-            if method == "bowtie2":
-                genome_path = os.path.join(self.working_dir, "{}_idx".format(method))
-                cmd = "{0} -x {1}/bowtie -1 {2} -2 {3} -S {4}".format(
-                    self.cfg.get('commands', 'bowtie2_cmd'),
-                    genome_path,
-                    file_1,
-                    file_2,
-                    sam_file
-                )
-
-            elif method == "bwa":
-                genome_path = os.path.join(self.working_dir, "context.fa")
-                cmd = "{0} mem {1} {2} {3} > {4}".format(
-                    self.cfg.get('commands', 'bwa_cmd'), 
-                    genome_path, 
-                    file_1, 
-                    file_2, 
-                    sam_file
-                )
-
-            elif method == "star":
-                genome_path = os.path.join(self.working_dir, "{}_idx".format(method))
-
-                cmd = "{} --outFileNamePrefix {} \
-                --limitOutSAMoneReadBytes 1000000 \
-                --genomeDir {} \
-                --readFilesCommand 'gzip -d -c -f' \
-                --readFilesIn {} {} \
-                --outSAMmode Full \
-                --alignEndsType EndToEnd \
-                --outFilterMultimapNmax -1 \
-                --outSAMattributes NH HI AS nM NM MD \
-                --outSAMunmapped None \
-                --outFilterMismatchNoverLmax 0.05 \
-                --outFilterMismatchNoverReadLmax 0.05 \
-                --runThreadN 12".format(self.cfg.get('commands','star_cmd'), 
-                                        output_path + "/", genome_path, 
-                                        file_1, file_2)
-
-
-
-            if self.interval_mode:
-                cmd_class = "{} -i {} -t {} -d {} -o {} --interval-mode".format(
-                    self.cfg.get('commands', 'classification_cmd'),
-                    sam_file,
-                    self.seq_tab,
-                    self.bp_distance,
-                    self.working_dir
-                )
-            else:
-                cmd_class = "{} -i {} -t {} -d {} -o {}".format(
-                    self.cfg.get('commands', 'classification_cmd'),
-                    sam_file,
-                    self.seq_tab,
-                    self.bp_distance,
-                    self.working_dir
-                )
-    
             out_shell.write("#!/bin/sh\n\n")
-            out_shell.write("fq1={}\n".format(file_1))
-            if file_2:
-                out_shell.write("fq2={}\n".format(file_2))
+            out_shell.write("fq1={}\n".format(self.fq1))
+            out_shell.write("fq2={}\n".format(self.fq2))
             out_shell.write("working_dir={}\n".format(self.working_dir))
             out_shell.write("echo \"Starting pipeline...\"\n")
-            if file_2:
-                out_shell.write("echo \"Starting alignment\"\n")
-                out_shell.write("{}\n".format(cmd))
-                out_shell.write("echo \"Starting quantification\"\n")
-                out_shell.write("{}\n".format(cmd_class))
+            out_shell.write("echo \"Generating index\"\n")
+            out_shell.write("{}\n".format(index_cmd))
+            out_shell.write("echo \"Starting alignment\"\n")
+            out_shell.write("{}\n".format(align_cmd))
+            out_shell.write("echo \"Starting quantification\"\n")
+            out_shell.write("{}\n".format(quant_cmd))
             out_shell.write("echo \"Processing done!\"\n")
 
+
+        #if not os.path.exists(genome_path):
+        IOMethods.execute_cmd(index_cmd)
+
         if not os.path.exists(sam_file):
-            self.execute_cmd(cmd)
+            IOMethods.execute_cmd(align_cmd)
 
         if not os.path.exists(quant_file):
-            self.execute_cmd(cmd_class)
+            IOMethods.execute_cmd(quant_cmd)
 
-        print("INFO: Processing complete for {}".format(self.working_dir))
+        logging.info("Processing complete for {}".format(self.working_dir))
 
-    def execute_cmd(self, cmd, working_dir = "."):
-        """This function pushes a command into a subprocess."""
-        print(cmd)
-        p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE, cwd = working_dir, shell = True)
-        (stdoutdata, stderrdata) = p.communicate()
-        r = p.returncode
-        if r != 0:
-            print("Error: Command \"{}\" returned non-zero exit status".format(cmd))
-            print(stderrdata)
-            sys.exit(1)
+
 
 def main():
     parser = ArgumentParser(description="Processing of demultiplexed FASTQs")
 
-    parser.add_argument("-i", "--input", dest="input_paths", nargs="+", help="Specify the fastq folder(s) or fastq file(s) to process.", required=True)
+    parser.add_argument("-1", "--fq1", dest="fq1", help="Specify path to Read 1 (R1) FASTQ file", required=True)
+    parser.add_argument("-2", "--fq2", dest="fq2", help="Specify path to Read 2 (R2) FASTQ file", required=True)
     parser.add_argument("-s", "--sequence_tab", dest="seq_tab", help="Specify the reference sequences as table with colums name, sequence, and position", required=True)
-    parser.add_argument("-d", "--bp_distance", dest="bp_distance", help="Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting", default=10)
     parser.add_argument("-o", "--output-folder", dest="output_folder", help="Specify the folder to save the results into.", required=True)
+    parser.add_argument("-d", "--bp_distance", dest="bp_distance", help="Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting", default=10)
     parser.add_argument("-m", "--method", dest="method", choices=["star", "bowtie2", "bwa"], help="Specify alignment software to generate the index", default="star")
     parser.add_argument('--interval-mode', dest='interval_mode', action='store_true', help='Specify if interval mode shall be used')
     args = parser.parse_args()
 
-    cfg = Config(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini"))
-
-    eq = Easyquant(cfg, args.input_paths, args.seq_tab, args.bp_distance, args.output_folder, args.interval_mode)
+    eq = Easyquant(args.fq1, args.fq2, args.seq_tab, args.bp_distance, args.output_folder, args.interval_mode)
     eq.run(args.method)
 
-    script_call = "python {} {}".format(os.path.realpath(__file__), " ".join(sys.argv[1:]))
-    
-    outf = open(os.path.join(args.output_folder, "run_command.sh"), "w")
-    outf.write("#!/bin/sh\n\n")
-    outf.write(script_call)
-    outf.close()
 
 if __name__ == "__main__":
     main()
