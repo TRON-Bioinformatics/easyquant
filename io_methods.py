@@ -4,6 +4,9 @@ import os
 import subprocess
 import sys
 
+csv.field_size_limit(sys.maxsize)
+
+
 def create_folder(folder_path):
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
