@@ -48,8 +48,8 @@ star_cmd=/path/to/STAR/2.6.1d/bin/Linux_x86_64_static/STAR
 
 
 ```
-usage: easy_quant.py [-h] -1 FQ1 -2 FQ2 -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE] [-m {star,bowtie2,bwa}]
-                     [--interval-mode]
+usage: easy_quant.py [-h] -1 FQ1 -2 FQ2 -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
+                     [--interval_mode] [-m {star,bowtie2,bwa}]
 
 Processing of demultiplexed FASTQs
 
@@ -64,9 +64,10 @@ optional arguments:
   -d BP_DISTANCE, --bp_distance BP_DISTANCE
                         Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for
                         junction/spanning read counting
+  --allow_mismatches    Allow mismatches within the region around the breakpoint determined by the bp_distance parameter
+  --interval_mode       Specify if interval mode shall be used
   -m {star,bowtie2,bwa}, --method {star,bowtie2,bwa}
                         Specify alignment software to generate the index
-  --interval-mode       Specify if interval mode shall be used
 
 ```
 
@@ -119,35 +120,35 @@ The main output consists of the file:
 
  - `<OUTPUT_FOLDER>/quantification.tsv` contains raw read counts for each sequence
 
-The output of the example data `<OUTPUT_FOLDER>/quantification.tsv` should look like this:
+The output of the example data `<OUTPUT_FOLDER>/quantification.tsv` using a mismatch ratio of 0.05 (default) should look like this:
 
 
 | name          | pos | junc | span | anch | a    | b    |
 |:--------------|----:|-----:|-----:|-----:|-----:|-----:|
-| CLDN18_1      | 400 | 570  | 689  | 25   | 1116 | 3989 |
-| CLDN18_2      | 361 | 0    | 1    | 0    | 1    | 3021 |
-| CLDN18_total  | 400 | 596  | 689  | 25   | 4373 | 5803 |
-| CLDN18_1_fake | 400 | 2    | 3    | 14   | 5    | 4761 |
-| CLDN18_2_fake | 361 | 0    | 0    | 0    | 0    | 4756 |
-| HPRT1         | 400 | 107  | 216  | 25   | 1400 | 1021 |
+| CLDN18_1      | 400 | 570  | 684  | 25   | 1109 | 3932 |
+| CLDN18_2      | 361 | 0    | 1    | 0    | 1    | 2968 |
+| CLDN18_total  | 400 | 593  | 688  | 25   | 4315 | 4990 |
+| CLDN18_1_fake | 400 | 0    | 3    | 0    | 3    | 3946 |
+| CLDN18_2_fake | 361 | 0    | 0    | 0    | 0    | 3943 |
+| HPRT1         | 400 | 107  | 215  | 25   | 1259 | 974  |
 
 
 Using the interval mode the output will look slightly different:
 
 | name          | interval | overlap_interval_end_reads | span_interval_end_pairs | within_interval | coverage_perc | coverage_mean | coverage_median |
 |:--------------|---------:|---------------------------:|------------------------:|----------------:|--------------:|--------------:|----------------:|
-| CLDN18_1      | 0_400    | 570                        | 689                     | 1116            | 0.89          | 183.38        | 137.5           |
-| CLDN18_1      | 400_786  | 0                          | 0                       | 3989            | 1.0           | 530.74        | 563.5           |
+| CLDN18_1      | 0_400    | 570                        | 684                     | 1109            | 0.89          | 182.71        | 137.5           |
+| CLDN18_1      | 400_786  | 0                          | 0                       | 3932            | 1.0           | 519.51        | 563.5           |
 | CLDN18_2      | 0_361    | 0                          | 1                       | 1               | 0.14          | 0.14          | 0.0             |
-| CLDN18_2      | 361_747  | 0                          | 0                       | 3021            | 1.0           | 402.0         | 425.5           |
-| CLDN18_total  | 0_400    | 596                        | 689                     | 4373            | 1.0           | 599.54        | 682.0           |
-| CLDN18_total  | 400_786  | 0                          | 0                       | 5803            | 1.0           | 754.26        | 757.5           |
-| CLDN18_1_fake | 0_400    | 2                          | 3                       | 5               | 0.25          | 0.71          | 0.0             |
-| CLDN18_1_fake | 400_786  | 0                          | 0                       | 4761            | 1.0           | 616.93        | 551.5           |
+| CLDN18_2      | 361_747  | 0                          | 0                       | 2968            | 1.0           | 392.15        | 425.5           |
+| CLDN18_total  | 0_400    | 593                        | 688                     | 4315            | 1.0           | 586.16        | 682.0           |
+| CLDN18_total  | 400_786  | 0                          | 0                       | 4990            | 1.0           | 659.15        | 757.5           |
+| CLDN18_1_fake | 0_400    | 0                          | 3                       | 3               | 0.16          | 0.38          | 0.0             |
+| CLDN18_1_fake | 400_786  | 0                          | 0                       | 3946            | 1.0           | 521.23        | 551.5           |
 | CLDN18_2_fake | 0_361    | 0                          | 0                       | 0               | 0.0           | 0.0           | 0.0             |
-| CLDN18_2_fake | 361_747  | 0                          | 0                       | 4756            | 1.0           | 616.27        | 551.0           |
-| HPRT1         | 0_400    | 107                        | 216                     | 1400            | 1.0           | 182.21        | 175.0           |
-| HPRT1         | 400_793  | 0                          | 0                       | 1021            | 1.0           | 131.49        | 101.0           |
+| CLDN18_2_fake | 361_747  | 0                          | 0                       | 3943            | 1.0           | 520.83        | 551.0           |
+| HPRT1         | 0_400    | 107                        | 215                     | 1259            | 1.0           | 167.77        | 175.0           |
+| HPRT1         | 400_793  | 0                          | 0                       | 974             | 0.98          | 126.40        | 101.0           |
 
 
 
