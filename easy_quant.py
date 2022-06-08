@@ -14,7 +14,7 @@ import io_methods as IOMethods
 
 class Easyquant(object):
     
-    def __init__(self, fq1, fq2, seq_tab, bp_distance, working_dir, interval_mode):
+    def __init__(self, fq1, fq2, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode):
 
         self.working_dir = os.path.abspath(working_dir)
         IOMethods.create_folder(self.working_dir)
@@ -42,6 +42,7 @@ class Easyquant(object):
         self.fq2 = os.path.abspath(fq2)
         self.seq_tab = os.path.abspath(seq_tab)
         self.bp_distance = bp_distance
+        self.allow_mismatches = allow_mismatches
         self.interval_mode = interval_mode
 
 
@@ -74,6 +75,7 @@ class Easyquant(object):
 
         fasta_file = os.path.join(self.working_dir, "context.fa")
         sam_file = os.path.join(align_path, "Aligned.out.sam")
+        bam_file = os.path.join(align_path, "Aligned.out.bam")
         quant_file = os.path.join(self.working_dir, "quantification.tsv")
 
         
@@ -89,7 +91,11 @@ class Easyquant(object):
 
 
         if method == "bowtie2":
-            index_cmd = "{}-build {} {}/bowtie".format(self.cfg.get('commands', 'bowtie2'), fasta_file, genome_path)
+            index_cmd = "{0}-build {1} {2}/bowtie".format(
+                self.cfg.get('commands', 'bowtie2'), 
+                fasta_file, 
+                genome_path
+            )
             align_cmd = "{0} -x {1}/bowtie -1 {2} -2 {3} -S {4}".format(
                 self.cfg.get('commands', 'bowtie2'),
                 genome_path,
@@ -100,7 +106,10 @@ class Easyquant(object):
 
         elif method == "bwa":
             genome_path = fasta_file
-            index_cmd = "{} index {}".format(self.cfg.get('commands', 'bwa'), fasta_file)
+            index_cmd = "{0} index {1}".format(
+                self.cfg.get('commands', 'bwa'), 
+                fasta_file
+            )
             align_cmd = "{0} mem {1} {2} {3} > {4}".format(
                 self.cfg.get('commands', 'bwa'), 
                 genome_path, 
@@ -112,48 +121,61 @@ class Easyquant(object):
         elif method == "star":
             fasta_size = IOMethods.get_fasta_size(fasta_file)
             sa_index_nbases = min(14, max(4, int(math.log(fasta_size) / 2 - 1)))
-            index_cmd = "{} --runMode genomeGenerate \
+            index_cmd = "{0} --runMode genomeGenerate \
             --limitGenomeGenerateRAM 40000000000 \
             --runThreadN 12 \
-            --genomeSAindexNbases {} \
-            --genomeDir {} \
-            --genomeFastaFiles {}".format(self.cfg.get('commands','star'), 
-                                          sa_index_nbases, genome_path, fasta_file)
+            --genomeSAindexNbases {1} \
+            --genomeDir {2} \
+            --genomeFastaFiles {3}".format(
+                self.cfg.get('commands','star'), 
+                sa_index_nbases, 
+                genome_path, 
+                fasta_file
+            )
 
-            align_cmd = "{} --outFileNamePrefix {} \
+            align_cmd = "{0} --outFileNamePrefix {1} \
             --limitOutSAMoneReadBytes 1000000 \
-            --genomeDir {} \
+            --genomeDir {2} \
             --readFilesCommand 'gzip -d -c -f' \
-            --readFilesIn {} {} \
+            --readFilesIn {3} {4} \
             --outSAMmode Full \
             --alignEndsType EndToEnd \
             --outFilterMultimapNmax -1 \
             --outSAMattributes NH HI AS nM NM MD \
             --outSAMunmapped None \
-            --outFilterMismatchNoverLmax 0.05 \
-            --outFilterMismatchNoverReadLmax 0.05 \
-            --runThreadN 12".format(self.cfg.get('commands','star'), 
-                                    align_path + "/", genome_path, 
-                                    self.fq1, self.fq2)
+            --outFilterMismatchNoverLmax {5} \
+            --outFilterMismatchNoverReadLmax {5} \
+            --runThreadN 12".format(
+                self.cfg.get('commands','star'), 
+                align_path + "/", 
+                genome_path, 
+                self.fq1, 
+                self.fq2, 
+                self.cfg.get('general', 'mismatch_ratio')
+            )
 
+        sam_to_bam_cmd = "{0} sort -o {2} {1} && {0} index {2}".format(
+            self.cfg.get('commands', 'samtools'), 
+            sam_file, 
+            bam_file
+        )
 
-
+        allow_mismatches_str = ""
+        interval_mode_str = ""
+        if self.allow_mismatches:
+            allow_mismatches_str = " --allow_mismatches"
         if self.interval_mode:
-            quant_cmd = "{} -i {} -t {} -d {} -o {} --interval-mode".format(
-                self.cfg.get('commands', 'quantification'),
-                sam_file,
-                self.seq_tab,
-                self.bp_distance,
-                self.working_dir
-            )
-        else:
-            quant_cmd = "{} -i {} -t {} -d {} -o {}".format(
-                self.cfg.get('commands', 'quantification'),
-                sam_file,
-                self.seq_tab,
-                self.bp_distance,
-                self.working_dir
-            )
+            interval_mode_str = " --interval_mode"
+
+        quant_cmd = "{0} -i {1} -t {2} -d {3} -o {4}{5}{6}".format(
+            self.cfg.get('commands', 'quantification'),
+            sam_file,
+            self.seq_tab,
+            self.bp_distance,
+            self.working_dir,
+            allow_mismatches_str,
+            interval_mode_str
+        )
 
 
         # define bash script in working directory    
@@ -174,7 +196,6 @@ class Easyquant(object):
             out_shell.write("echo \"Processing done!\"\n")
 
 
-        #if not os.path.exists(genome_path):
         IOMethods.execute_cmd(index_cmd)
 
         if not os.path.exists(sam_file):
@@ -182,6 +203,9 @@ class Easyquant(object):
 
         if not os.path.exists(quant_file):
             IOMethods.execute_cmd(quant_cmd)
+
+        if not os.path.exists(bam_file):
+            IOMethods.execute_cmd(sam_to_bam_cmd)
 
         logging.info("Processing complete for {}".format(self.working_dir))
 
@@ -195,11 +219,12 @@ def main():
     parser.add_argument("-s", "--sequence_tab", dest="seq_tab", help="Specify the reference sequences as table with colums name, sequence, and position", required=True)
     parser.add_argument("-o", "--output-folder", dest="output_folder", help="Specify the folder to save the results into.", required=True)
     parser.add_argument("-d", "--bp_distance", dest="bp_distance", help="Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting", default=10)
+    parser.add_argument("--allow_mismatches", dest="allow_mismatches", action="store_true", help="Allow mismatches within the region around the breakpoint determined by the bp_distance parameter")
+    parser.add_argument("--interval_mode", dest="interval_mode", action="store_true", help="Specify if interval mode shall be used")
     parser.add_argument("-m", "--method", dest="method", choices=["star", "bowtie2", "bwa"], help="Specify alignment software to generate the index", default="star")
-    parser.add_argument('--interval-mode', dest='interval_mode', action='store_true', help='Specify if interval mode shall be used')
     args = parser.parse_args()
 
-    eq = Easyquant(args.fq1, args.fq2, args.seq_tab, args.bp_distance, args.output_folder, args.interval_mode)
+    eq = Easyquant(args.fq1, args.fq2, args.seq_tab, args.bp_distance, args.output_folder, args.allow_mismatches, args.interval_mode)
     eq.run(args.method)
 
 

@@ -69,7 +69,7 @@ def get_seq_to_pos(seq_table_file):
 
 
 
-def classify_read(aln_start, aln_stop, aln_pairs, intervals, bp_dist):
+def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, bp_dist):
     """
     Classifies read and returns dict with information on mapping position
     """
@@ -100,11 +100,12 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, bp_dist):
             # to https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_aligned_pairs
             aln_seq = [s for (q, r, s) in aln_pairs if r is not None and reg_start <= r and r < reg_end]
             no_snp = all(s in MATCH_BASES for s in aln_seq)
-            if no_ins_or_del and no_snp:
+            if (no_ins_or_del and no_snp) or allow_mismatches:
                 anchor = min(aln_stop - ref_stop, ref_stop - aln_start)
                 read_info["junc"] = True
                 read_info["anchor"] = anchor
                 read_info["interval"] = interval_name
+
         
         # read maps completely within the interval
         #if aln_start > ref_start - bp_dist and aln_stop < ref_stop + bp_dist:
@@ -118,7 +119,7 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, bp_dist):
 
 
 class Quantification(object):
-    def __init__(self, seq_table_file, bam_file, output_path, bp_dist, interval_mode):
+    def __init__(self, seq_table_file, bam_file, output_path, bp_dist, allow_mismatches, interval_mode):
         self.seq_table_file = seq_table_file
         self.bam_file = bam_file
         self.output_path = os.path.abspath(output_path)
@@ -126,6 +127,7 @@ class Quantification(object):
         self.reads_file = os.path.join(output_path, "read_info.tsv")
         self.reads_out = open(self.reads_file, "w")
         self.bp_dist = bp_dist
+        self.allow_mismatches = allow_mismatches
         self.interval_mode = interval_mode
         self.seq_to_pos = get_seq_to_pos(seq_table_file)
         self.counts, self.cov_dict = self.init_counts(self.seq_to_pos)
@@ -245,8 +247,8 @@ class Quantification(object):
         r2_pairs = r2.get_aligned_pairs(with_seq=True)
 
         # Get read information [junc, within, interval]
-        r1_info = classify_read(r1_start, r1_stop, r1_pairs, self.seq_to_pos[seq_name], self.bp_dist)
-        r2_info = classify_read(r2_start, r2_stop, r2_pairs, self.seq_to_pos[seq_name], self.bp_dist)
+        r1_info = classify_read(r1_start, r1_stop, r1_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
+        r2_info = classify_read(r2_start, r2_stop, r2_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
 
         if not self.interval_mode:
             self.counts[seq_name][2] = max([r1_info["anchor"], r2_info["anchor"], self.counts[seq_name][2]])
@@ -401,11 +403,12 @@ def main():
     parser.add_argument('-o', '--output_path', dest='output_path', help='Output path where results are stored', default="test_out")
     parser.add_argument('-d', '--bp_distance', dest='bp_distance', type=int, default=10,
                         help='Distance around postion of interest for junction read counts.')
-    parser.add_argument('--interval-mode', dest='interval_mode', action='store_true', help='Specify if interval mode shall be used')
+    parser.add_argument('--allow_mismatches', dest='allow_mismatches', action='store_true', help='Allow mismatches within the region around the breakpoint determined by the bp_distance parameter')
+    parser.add_argument('--interval_mode', dest='interval_mode', action='store_true', help='Specify if interval mode shall be used')
     args = parser.parse_args()
 
 
-    q = Quantification(args.seq_table_file, args.input_bam, args.output_path, args.bp_distance, args.interval_mode)
+    q = Quantification(args.seq_table_file, args.input_bam, args.output_path, args.bp_distance, args.allow_mismatches, args.interval_mode)
     
 
 if __name__ == "__main__":

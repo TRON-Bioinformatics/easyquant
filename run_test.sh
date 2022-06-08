@@ -69,4 +69,20 @@ python easy_quant.py \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
   -o example_out_csv_interval \
-  --interval-mode
+  --interval_mode
+
+
+#================================================================
+# Test run using interval mode
+#================================================================
+
+# Remove existing output folder
+rm -rf example_out_csv_allow_mismatches
+
+# Run pipeline
+python easy_quant.py \
+  -1 example_data/example_rna-seq_R1_001.fastq.gz \
+  -2 example_data/example_rna-seq_R2_001.fastq.gz \
+  -s example_data/CLDN18_Context_seq.csv \
+  -o example_out_csv_mismatches \
+  --allow_mismatches
