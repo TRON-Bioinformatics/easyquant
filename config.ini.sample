@@ -1,5 +1,6 @@
 [general]
 version=0.4.0
+mismatch_ratio=0.05
 
 [commands]
 samtools=/path/to/samtools
