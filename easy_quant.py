@@ -143,15 +143,20 @@ class Easyquant(object):
             --outFilterMultimapNmax -1 \
             --outSAMattributes NH HI AS nM NM MD \
             --outSAMunmapped None \
-            --outFilterMismatchNoverLmax {5} \
             --outFilterMismatchNoverReadLmax {5} \
+            --scoreDelOpen {6} \
+            --scoreInsOpen {6} \
+            --scoreDelBase {7} \
+            --scoreInsBase {7} \
             --runThreadN 12".format(
                 self.cfg.get('commands','star'), 
                 align_path + "/", 
                 genome_path, 
                 self.fq1, 
                 self.fq2, 
-                self.cfg.get('general', 'mismatch_ratio')
+                self.cfg.get('general', 'mismatch_ratio'),
+                self.cfg.get('general', 'indel_open_penalty'),
+                self.cfg.get('general', 'indel_extension_penalty')
             )
 
         sam_to_bam_cmd = "{0} sort -o {2} {1} && {0} index {2}".format(
