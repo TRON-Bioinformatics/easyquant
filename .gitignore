@@ -10,3 +10,8 @@ example_out*
 *.pyc
 
 *.Rproj
+
+.idea/
+dist
+easy_quant.egg-info
+build
