@@ -68,6 +68,9 @@ optional arguments:
   --interval_mode       Specify if interval mode shall be used
   -m {star,bowtie2,bwa}, --method {star,bowtie2,bwa}
                         Specify alignment software to generate the index
+  -t NUM_THREADS, --threads NUM_THREADS
+                        Specify number of threads to use for the alignment
+
 
 ```
 
@@ -83,7 +86,8 @@ python easy_quant.py \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
   -o example_out \
-  -m star
+  -m star \
+  -t 6
   [--interval-mode]
 ```
 

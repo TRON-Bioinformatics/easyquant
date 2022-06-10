@@ -13,7 +13,8 @@ python easy_quant.py \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
-  -o example_out_csv
+  -o example_out_csv \
+  -t 12
 
 #================================================================
 # Test run using a tab-separated input file
@@ -77,12 +78,12 @@ python easy_quant.py \
 #================================================================
 
 # Remove existing output folder
-rm -rf example_out_csv_allow_mismatches
+rm -rf example_out_csv_mismatch
 
 # Run pipeline
 python easy_quant.py \
   -1 example_data/example_rna-seq_R1_001.fastq.gz \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
-  -o example_out_csv_mismatches \
+  -o example_out_csv_mismatch \
   --allow_mismatches

@@ -46,7 +46,7 @@ class Easyquant(object):
         self.interval_mode = interval_mode
 
 
-    def run(self, method):
+    def run(self, method, num_threads):
         """This function runs the pipeline on paired-end FASTQ files."""
 
 
@@ -96,8 +96,9 @@ class Easyquant(object):
                 fasta_file, 
                 genome_path
             )
-            align_cmd = "{0} -x {1}/bowtie -1 {2} -2 {3} -S {4}".format(
+            align_cmd = "{0} -p {1} -x {2}/bowtie -1 {3} -2 {4} -S {5}".format(
                 self.cfg.get('commands', 'bowtie2'),
+                num_threads,
                 genome_path,
                 self.fq1,
                 self.fq2,
@@ -110,8 +111,9 @@ class Easyquant(object):
                 self.cfg.get('commands', 'bwa'), 
                 fasta_file
             )
-            align_cmd = "{0} mem {1} {2} {3} > {4}".format(
+            align_cmd = "{0} mem -t {1} {2} {3} {4} > {5}".format(
                 self.cfg.get('commands', 'bwa'), 
+                num_threads,
                 genome_path, 
                 self.fq1, 
                 self.fq2, 
@@ -123,11 +125,12 @@ class Easyquant(object):
             sa_index_nbases = min(14, max(4, int(math.log(fasta_size) / 2 - 1)))
             index_cmd = "{0} --runMode genomeGenerate \
             --limitGenomeGenerateRAM 40000000000 \
-            --runThreadN 12 \
-            --genomeSAindexNbases {1} \
-            --genomeDir {2} \
-            --genomeFastaFiles {3}".format(
+            --runThreadN {1} \
+            --genomeSAindexNbases {2} \
+            --genomeDir {3} \
+            --genomeFastaFiles {4}".format(
                 self.cfg.get('commands','star'), 
+                num_threads,
                 sa_index_nbases, 
                 genome_path, 
                 fasta_file
@@ -148,7 +151,7 @@ class Easyquant(object):
             --scoreInsOpen {6} \
             --scoreDelBase {7} \
             --scoreInsBase {7} \
-            --runThreadN 12".format(
+            --runThreadN {8}".format(
                 self.cfg.get('commands','star'), 
                 align_path + "/", 
                 genome_path, 
@@ -156,7 +159,8 @@ class Easyquant(object):
                 self.fq2, 
                 self.cfg.get('general', 'mismatch_ratio'),
                 self.cfg.get('general', 'indel_open_penalty'),
-                self.cfg.get('general', 'indel_extension_penalty')
+                self.cfg.get('general', 'indel_extension_penalty'),
+                num_threads
             )
 
         sam_to_bam_cmd = "{0} sort -o {2} {1} && {0} index {2}".format(
@@ -223,14 +227,15 @@ def main():
     parser.add_argument("-2", "--fq2", dest="fq2", help="Specify path to Read 2 (R2) FASTQ file", required=True)
     parser.add_argument("-s", "--sequence_tab", dest="seq_tab", help="Specify the reference sequences as table with colums name, sequence, and position", required=True)
     parser.add_argument("-o", "--output-folder", dest="output_folder", help="Specify the folder to save the results into.", required=True)
-    parser.add_argument("-d", "--bp_distance", dest="bp_distance", help="Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting", default=10)
+    parser.add_argument("-d", "--bp_distance", dest="bp_distance", type=int, help="Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting", default=10)
     parser.add_argument("--allow_mismatches", dest="allow_mismatches", action="store_true", help="Allow mismatches within the region around the breakpoint determined by the bp_distance parameter")
     parser.add_argument("--interval_mode", dest="interval_mode", action="store_true", help="Specify if interval mode shall be used")
     parser.add_argument("-m", "--method", dest="method", choices=["star", "bowtie2", "bwa"], help="Specify alignment software to generate the index", default="star")
+    parser.add_argument("-t", "--threads", dest="num_threads", type=int, help="Specify number of threads to use for the alignment", default=1)
     args = parser.parse_args()
 
     eq = Easyquant(args.fq1, args.fq2, args.seq_tab, args.bp_distance, args.output_folder, args.allow_mismatches, args.interval_mode)
-    eq.run(args.method)
+    eq.run(args.method, args.num_threads)
 
 
 if __name__ == "__main__":
