@@ -49,7 +49,7 @@ star_cmd=/path/to/STAR/2.6.1d/bin/Linux_x86_64_static/STAR
 
 ```
 usage: easy_quant.py [-h] -1 FQ1 -2 FQ2 -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
-                     [--interval_mode] [-m {star,bowtie2,bwa}]
+                     [--interval_mode] [-m {star,bowtie2,bwa}] [-t NUM_THREADS]
 
 Processing of demultiplexed FASTQs
 
