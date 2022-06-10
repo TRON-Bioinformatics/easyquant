@@ -5,7 +5,6 @@ import csv
 import logging
 import os
 import sys
-
 import pysam
 
 csv.field_size_limit(sys.maxsize)

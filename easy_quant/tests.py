@@ -2,7 +2,8 @@
 
 import unittest
 
-from requantify import perc_true, mean, median
+from easy_quant.requantify import perc_true, mean, median
+
 
 class TestRequantify(unittest.TestCase):
 
