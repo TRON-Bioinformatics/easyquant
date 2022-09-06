@@ -12,7 +12,7 @@ breakpoint (spanning pairs).
 
 - Input:
     - Table with target sequences and breakpoints position (CSV/TSV format)
-    - fastq files
+    - fastq files / BAM file (BAM input only works in combination with STAR as aligner)
 - Map reads against sequences using STAR/Bowtie2/BWA
     - Generate Index of sequences as reference
     - Map reads
@@ -24,7 +24,7 @@ breakpoint (spanning pairs).
 
  - Python 3
    - pysam (>= 0.16.0.1)
- - STAR (>= 2.6.1d)
+ - STAR (>= 2.7.8a)
  - samtools (>= 1.9)
  
 ## Installation
@@ -41,22 +41,25 @@ Update `config.ini` with installation paths
 
 ```
 samtools_cmd=/path/to/samtools/1.9/samtools
-star_cmd=/path/to/STAR/2.6.1d/bin/Linux_x86_64_static/STAR
+star_cmd=/path/to/STAR/2.7.8a/bin/Linux_x86_64_static/STAR
 ```
 
 ## Usage
 
 
 ```
-usage: easy_quant.py [-h] -1 FQ1 -2 FQ2 -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
-                     [--interval_mode] [-m {star,bowtie2,bwa}] [-t NUM_THREADS]
+usage: easy_quant.py [-h] -i INPUT_FILES [INPUT_FILES ...] [-f {fastq,bam}] -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE]
+                     [--allow_mismatches] [--interval_mode] [-m {star,bowtie2,bwa}] [-t NUM_THREADS]
+                     [--star_cmd_params STAR_CMD_PARAMS]
 
 Processing of demultiplexed FASTQs
 
 optional arguments:
   -h, --help            show this help message and exit
-  -1 FQ1, --fq1 FQ1     Specify path to Read 1 (R1) FASTQ file
-  -2 FQ2, --fq2 FQ2     Specify path to Read 2 (R2) FASTQ file
+  -i INPUT_FILES [INPUT_FILES ...], --input_files INPUT_FILES [INPUT_FILES ...]
+                        Specify input file(s)
+  -f {fastq,bam}, --input_format {fastq,bam}
+                        Specify input format
   -s SEQ_TAB, --sequence_tab SEQ_TAB
                         Specify the reference sequences as table with colums name, sequence, and position
   -o OUTPUT_FOLDER, --output-folder OUTPUT_FOLDER
@@ -70,19 +73,37 @@ optional arguments:
                         Specify alignment software to generate the index
   -t NUM_THREADS, --threads NUM_THREADS
                         Specify number of threads to use for the alignment
-
+  --star_cmd_params STAR_CMD_PARAMS
+                        Specify STAR commandline parameters to use for the alignment
 
 ```
 
 ### Use case with example data
 
 We use toy example data from the folder `example_data`. It consists of a table 
-with input sequences and positions, as well as two fastq files. 
+with input sequences and positions, as well as two fastq files / one BAM file. 
+
+Fastqs as input:
 
 ```
 python easy_quant.py \
-  -1 example_data/example_rna-seq_R1_001.fastq.gz \
-  -2 example_data/example_rna-seq_R2_001.fastq.gz \
+  -i example_data/example_rna-seq_R1_001.fastq.gz \
+  example_data/example_rna-seq_R1_001.fastq.gz \
+  -f fastq  
+  -s example_data/CLDN18_Context_seq.csv \
+  -d 10 \
+  -o example_out \
+  -m star \
+  -t 6
+  [--interval-mode]
+```
+
+BAM as input:
+
+```
+python easy_quant.py \
+  -i example_data/example_rna-seq.bam \
+  -f bam \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
   -o example_out \
@@ -110,9 +131,9 @@ Example format of the input table:
 |seq4     | CGGCATCATCG   |0,5,10     |
 
 
-#### Fastq files
+#### Fastq files / BAM file
 
-Paired fastq files as input is required 
+Paired fastq files or an unsorted BAM file (no multimappers) as input is required 
 to successfully determine read classes as described below. 
 
 #### Config file
