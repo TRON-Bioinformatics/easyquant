@@ -173,6 +173,8 @@ class Quantification(object):
         Parses alignment and iterates over each read while quantifying it.
         """
 
+        # TODO: Implement method to parse BAM files using mate information
+
         logger.info("Reading alignment file (path={}).".format(self.bam_file))
         logger.info("Starting quantification.".format(self.bam_file))
         bam = pysam.AlignmentFile(self.bam_file, "rb")
