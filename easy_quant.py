@@ -2,7 +2,6 @@
 
 from argparse import ArgumentParser
 from configparser import ConfigParser
-#import gzip
 import logging
 import math
 import os
@@ -12,25 +11,28 @@ import sys
 import io_methods as IOMethods
 
 
-#def get_read_count(fq_file):
-#    n = 0
-#    with gzip.open(fq_file) as inf:
-#        for line in inf:
-#            n += 1
-#    print(n)
-#    return n/4
+def get_read_count(infile, format="fq"):
+    if format == "fq":
+        return __get_read_count_fq(infile)
+    elif format == "bam":
+        return __get_read_count_bam(infile)
 
-#def get_read_count(fq_file):
-#    """Parses input FASTQ to get read count"""
-#    ps = subprocess.Popen(("zcat", fq_file), stdout=subprocess.PIPE)
-#    result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
-#    return int(result) / 4
+def __get_read_count_fq(fq_file):
+    """Parses input FASTQ to get read count"""
+    ps = subprocess.Popen(("zcat", fq_file), stdout=subprocess.PIPE)
+    result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
+    return int(result) / 2
+
+def __get_read_count_bam(bam_file):
+    """Parses input BAM to get read count"""
+    result = subprocess.check_output(["samtools", "view", "-c", bam_file])
+    return int(result)
     
 
 
 class Easyquant(object):
     
-    def __init__(self, input_files, input_format, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode):
+    def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode):
 
         self.working_dir = os.path.abspath(working_dir)
         IOMethods.create_folder(self.working_dir)
@@ -54,8 +56,16 @@ class Easyquant(object):
 
         self.cfg = ConfigParser()
         self.cfg.read(cfg_file)
-        self.input_files = [os.path.abspath(x) for x in input_files]
-        self.input_format = input_format
+        self.fq1 = None
+        self.fq2 = None
+        self.bam = None
+        if fq1:
+            self.fq1 = os.path.abspath(fq1)
+        if fq2:
+            self.fq2 = os.path.abspath(fq2)
+        if bam:
+            self.bam = os.path.abspath(bam)
+
         self.seq_tab = os.path.abspath(seq_tab)
         self.bp_distance = bp_distance
         self.allow_mismatches = allow_mismatches
@@ -72,8 +82,11 @@ class Easyquant(object):
             outf.write("#!/bin/sh\n\n")
             outf.write("version=\"{}\"\n".format(self.cfg.get("general", "version")))
             outf.write("python {} \\\n".format(os.path.realpath(__file__)))
-            outf.write("-i {} \\\n".format(" ".join(self.input_files)))
-            outf.write("-f {} \\\n".format(self.input_format))
+            if self.fq1 and self.fq2:
+                outf.write("-1 {} \\\n".format(self.fq1))
+                outf.write("-2 {} \\\n".format(self.fq2))
+            elif self.bam:
+                outf.write("-b {} \\\n".format(self.bam))
             outf.write("-s {} \\\n".format(self.seq_tab))
             outf.write("-o {} \\\n".format(self.working_dir))
             outf.write("-d {} \\\n".format(self.bp_distance))
@@ -88,11 +101,11 @@ class Easyquant(object):
 
 
         logging.info("Executing easyquant {}".format(self.cfg.get("general", "version")))
-        if self.input_format == "fastq":
-            logging.info("FQ1={}".format(self.input_files[0]))
-            logging.info("FQ2={}".format(self.input_files[1]))
-        elif self.input_format == "bam":
-            logging.info("BAM={}".format(self.input_files[0]))
+        if self.fq1 and self.fq2:
+            logging.info("FQ1={}".format(self.fq1))
+            logging.info("FQ2={}".format(self.fq2))
+        elif self.bam:
+            logging.info("BAM={}".format(self.bam))
 
         genome_path = os.path.join(self.working_dir, "index")
         align_path = os.path.join(self.working_dir, "alignment")
@@ -100,12 +113,12 @@ class Easyquant(object):
         fasta_file = os.path.join(self.working_dir, "context.fa")
         sam_file = os.path.join(align_path, "Aligned.out.sam")
         bam_file = ""
-        if self.input_format == "fastq":
+        if self.fq1 and self.fq2:
             bam_file = os.path.join(align_path, "Aligned.out.bam")
-        elif self.input_format == "bam":
+        elif self.bam:
             bam_file = os.path.join(align_path, "Processed.out.bam")
         quant_file = os.path.join(self.working_dir, "quantification.tsv")
-        #num_reads_file = os.path.join(self.working_dir, "Star_org_input_reads.txt")
+        num_reads_file = os.path.join(self.working_dir, "num_reads.txt")
         
         #create folders
         IOMethods.create_folder(genome_path)
@@ -114,9 +127,12 @@ class Easyquant(object):
         IOMethods.csv_to_fasta(self.seq_tab, fasta_file)
 
 
-        #if not os.path.exists(num_reads_file) or os.stat(num_reads_file).st_size == 0:
-        #    with open(num_reads_file, "w") as outf:
-        #        outf.write(str(int(get_read_count(self.fq1))))
+        if not os.path.exists(num_reads_file) or os.stat(num_reads_file).st_size == 0:
+            with open(num_reads_file, "w") as outf:
+                if self.fq1:
+                    outf.write(str(int(get_read_count(self.fq1, "fq"))))
+                elif self.bam:
+                    outf.write(str(int(get_read_count(self.bam, "bam"))))
 
 
         index_cmd = None
@@ -134,8 +150,8 @@ class Easyquant(object):
                 self.cfg.get('commands', 'bowtie2'),
                 num_threads,
                 genome_path,
-                self.input_files[0],
-                self.input_files[1],
+                self.fq1,
+                self.fq2,
                 sam_file
             )
 
@@ -149,8 +165,8 @@ class Easyquant(object):
                 self.cfg.get('commands', 'bwa'), 
                 num_threads,
                 genome_path, 
-                self.input_files[0], 
-                self.input_files[1], 
+                self.fq1, 
+                self.fq2, 
                 sam_file
             )
 
@@ -170,37 +186,31 @@ class Easyquant(object):
                 fasta_file
             )
 
-            # Most useful STAR parameters and their default values:
-            #--outFilterMismatchNoverReadLmax 0.3 \
-            #--scoreDelOpen -2 \
-            #--scoreInsOpen -2 \
-            #--scoreDelBase -2 \
-            #--scoreInsBase -2 \
 
-
-            if self.input_format == "fastq":
+            if self.fq1 and self.fq2:
 
                 align_cmd = "{0} --outFileNamePrefix {1} \
                 --limitOutSAMoneReadBytes 1000000 \
                 --genomeDir {2} \
                 --readFilesCommand 'gzip -d -c -f' \
-                --readFilesIn {3} \
+                --readFilesIn {3} {4} \
                 --outSAMmode Full \
                 --alignEndsType EndToEnd \
                 --outFilterMultimapNmax -1 \
                 --outSAMattributes NH HI AS nM NM MD \
                 --outSAMunmapped None \
-                {4} \
-                --runThreadN {5}".format(
+                {5} \
+                --runThreadN {6}".format(
                     self.cfg.get('commands','star'), 
                     align_path + "/", 
                     genome_path, 
-                    " ".join(self.input_files),
+                    self.fq1,
+                    self.fq2,
                     star_cmd_params,
                     num_threads
                 )
 
-            elif self.input_format == "bam":
+            elif self.bam:
                 align_cmd = "{0} --outFileNamePrefix {1} \
                 --runMode alignReads \
                 --limitOutSAMoneReadBytes 1000000 \
@@ -219,7 +229,7 @@ class Easyquant(object):
                     self.cfg.get('commands','star'), 
                     align_path + "/", 
                     genome_path, 
-                    " ".join(self.input_files),
+                    self.bam,
                     star_cmd_params,
                     num_threads
                 )
@@ -248,24 +258,17 @@ class Easyquant(object):
             interval_mode_str
         )
 
-        #quant_cmd = "{0} -i {1} -d {2} -o {3}".format(
-        #    self.cfg.get('commands', 'quantification'),
-        #    bam_file,
-        #    self.bp_distance,
-        #    quant_file
-        #)
-
 
         # define bash script in working directory    
         shell_script = os.path.join(self.working_dir, "requant.sh")
         # start to write shell script to execute mapping cmd
         with open(shell_script, "w") as out_shell:
             out_shell.write("#!/bin/sh\n\n")
-            if self.input_format == "fastq":
-                out_shell.write("fq1={}\n".format(self.input_files[0]))
-                out_shell.write("fq2={}\n".format(self.input_files[1]))
-            elif self.input_format == "bam":
-                out_shell.write("bam={}\n".format(self.input_files[0]))
+            if self.fq1 and self.fq2:
+                out_shell.write("fq1={}\n".format(self.fq1))
+                out_shell.write("fq2={}\n".format(self.fq2))
+            elif self.bam:
+                out_shell.write("bam={}\n".format(self.bam))
             out_shell.write("working_dir={}\n".format(self.working_dir))
             out_shell.write("echo \"Starting pipeline...\"\n")
             out_shell.write("echo \"Generating index\"\n")
@@ -295,9 +298,10 @@ class Easyquant(object):
 
 def main():
     parser = ArgumentParser(description="Processing of demultiplexed FASTQs")
-
-    parser.add_argument("-i", "--input_files", dest="input_files", nargs="+", help="Specify input file(s)", required=True)
-    parser.add_argument("-f", "--input_format", dest="input_format", choices=["fastq", "bam"], help="Specify input format", default="fastq")
+    
+    parser.add_argument("-1", "--fq1", dest="fq1", help="Specify path to Read 1 (R1) FASTQ file")
+    parser.add_argument("-2", "--fq2", dest="fq2", help="Specify path to Read 2 (R2) FASTQ file")
+    parser.add_argument("-b", "--bam_file", dest="bam", help="Specify path to input BAM file as alternative to FASTQ input")
     parser.add_argument("-s", "--sequence_tab", dest="seq_tab", help="Specify the reference sequences as table with colums name, sequence, and position", required=True)
     parser.add_argument("-o", "--output-folder", dest="output_folder", help="Specify the folder to save the results into.", required=True)
     parser.add_argument("-d", "--bp_distance", dest="bp_distance", type=int, help="Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting", default=10)
@@ -308,15 +312,20 @@ def main():
     parser.add_argument("--star_cmd_params", dest="star_cmd_params", help="Specify STAR commandline parameters to use for the alignment", default="")
     args = parser.parse_args()
 
-    if args.input_format == "fastq" and len(args.input_files) != 2:
-        print("FASTQ input format selected, but input requires two FASTQ files. Please try again.")
-        sys.exit(1)
 
-    if args.input_format == "bam" and len(args.input_files) > 1:
-        print("BAM input format selected, but more than one file given. Please try again.")
-        sys.exit(1)
+    if not args.bam:
+        if args.fq1 and not args.fq2:
+            parser.error("--fq1 requires --fq2")
+        elif not args.fq1 and args.fq2:
+            parser.error("--fq2 requires --fq1")
+    else:
+        if args.method != "star":
+            parser.error("argument -b/--bam_file: only allowed with argument -m/--method == star")
+        if args.fq1 or args.fq2:
+            parser.error("argument -b/--bam_file: not allowed with argument -1/--fq1 or -2/--fq2")
 
-    eq = Easyquant(args.input_files, args.input_format, args.seq_tab, args.bp_distance, args.output_folder, args.allow_mismatches, args.interval_mode)
+
+    eq = Easyquant(args.fq1, args.fq2, args.bam, args.seq_tab, args.bp_distance, args.output_folder, args.allow_mismatches, args.interval_mode)
     eq.run(args.method, args.num_threads, args.star_cmd_params)
 
 

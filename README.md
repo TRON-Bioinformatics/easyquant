@@ -48,18 +48,17 @@ star_cmd=/path/to/STAR/2.7.8a/bin/Linux_x86_64_static/STAR
 
 
 ```
-usage: easy_quant.py [-h] -i INPUT_FILES [INPUT_FILES ...] [-f {fastq,bam}] -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE]
-                     [--allow_mismatches] [--interval_mode] [-m {star,bowtie2,bwa}] [-t NUM_THREADS]
-                     [--star_cmd_params STAR_CMD_PARAMS]
+usage: easy_quant.py [-h] [-1 FQ1] [-2 FQ2] [-b BAM] -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
+                     [--interval_mode] [-m {star,bowtie2,bwa}] [-t NUM_THREADS] [--star_cmd_params STAR_CMD_PARAMS]
 
 Processing of demultiplexed FASTQs
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i INPUT_FILES [INPUT_FILES ...], --input_files INPUT_FILES [INPUT_FILES ...]
-                        Specify input file(s)
-  -f {fastq,bam}, --input_format {fastq,bam}
-                        Specify input format
+  -1 FQ1, --fq1 FQ1     Specify path to Read 1 (R1) FASTQ file
+  -2 FQ2, --fq2 FQ2     Specify path to Read 2 (R2) FASTQ file
+  -b BAM, --bam_file BAM
+                        Specify path to input BAM file as alternative to FASTQ input
   -s SEQ_TAB, --sequence_tab SEQ_TAB
                         Specify the reference sequences as table with colums name, sequence, and position
   -o OUTPUT_FOLDER, --output-folder OUTPUT_FOLDER
@@ -87,9 +86,8 @@ Fastqs as input:
 
 ```
 python easy_quant.py \
-  -i example_data/example_rna-seq_R1_001.fastq.gz \
-  example_data/example_rna-seq_R1_001.fastq.gz \
-  -f fastq  
+  -1 example_data/example_rna-seq_R1_001.fastq.gz \
+  -2 example_data/example_rna-seq_R1_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
   -o example_out \
@@ -102,8 +100,7 @@ BAM as input:
 
 ```
 python easy_quant.py \
-  -i example_data/example_rna-seq.bam \
-  -f bam \
+  -b example_data/example_rna-seq.bam \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
   -o example_out \
