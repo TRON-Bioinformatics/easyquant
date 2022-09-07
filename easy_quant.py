@@ -11,11 +11,11 @@ import sys
 import io_methods as IOMethods
 
 
-def get_read_count(infile, format="fq"):
+def get_read_count(infile, tool, format="fq"):
     if format == "fq":
         return __get_read_count_fq(infile)
     elif format == "bam":
-        return __get_read_count_bam(infile)
+        return __get_read_count_bam(infile, tool)
 
 def __get_read_count_fq(fq_file):
     """Parses input FASTQ to get read count"""
@@ -23,9 +23,9 @@ def __get_read_count_fq(fq_file):
     result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
     return int(result) / 2
 
-def __get_read_count_bam(bam_file):
+def __get_read_count_bam(bam_file, tool):
     """Parses input BAM to get read count"""
-    result = subprocess.check_output(["samtools", "view", "-c", bam_file])
+    result = subprocess.check_output([tool, "view", "-c", bam_file])
     return int(result)
     
 
@@ -130,9 +130,9 @@ class Easyquant(object):
         if not os.path.exists(num_reads_file) or os.stat(num_reads_file).st_size == 0:
             with open(num_reads_file, "w") as outf:
                 if self.fq1:
-                    outf.write(str(int(get_read_count(self.fq1, "fq"))))
+                    outf.write(str(int(get_read_count(self.fq1, None, "fq"))))
                 elif self.bam:
-                    outf.write(str(int(get_read_count(self.bam, "bam"))))
+                    outf.write(str(int(get_read_count(self.bam, self.cfg.get('commands', 'samtools'), "bam"))))
 
 
         index_cmd = None
