@@ -14,7 +14,8 @@ python easy_quant.py \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
   -o example_out_csv \
-  -t 12
+  -t 12 \
+  --star_cmd_params "--outFilterMismatchNoverReadLmax 0.3 --scoreDelOpen -2 --scoreInsOpen -2 --scoreDelBase -2 --scoreInsBase -2"
 
 #================================================================
 # Test run using a tab-separated input file
@@ -87,3 +88,19 @@ python easy_quant.py \
   -s example_data/CLDN18_Context_seq.csv \
   -o example_out_csv_mismatch \
   --allow_mismatches
+
+
+#================================================================
+# Test run using BAM file as input
+#================================================================
+
+# Remove existing output folder
+rm -rf example_out_csv_bam
+
+# Run pipeline
+python easy_quant.py \
+  -b example_data/example_rna-seq.bam \
+  -s example_data/CLDN18_Context_seq.csv \
+  -d 10 \
+  -o example_out_csv_bam \
+  -t 12 \
