@@ -1,11 +1,5 @@
 [general]
-version=0.4.0
-# max number of mismatches per pair relative to read length: for 2x100b, max number of mismatches is 0.04*200=8 for the paired read (STAR only)
-mismatch_ratio=0.05
-# Insertion/Deletion open penalty, lower value means higher penalty (STAR only)
-indel_open_penalty=-2
-# Insertion/Deletion extension penalty, lower value means higher penalty (STAR only)
-indel_extension_penalty=-2
+version=0.4.1
 
 [commands]
 samtools=/path/to/samtools
