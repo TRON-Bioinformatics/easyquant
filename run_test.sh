@@ -103,4 +103,20 @@ python easy_quant.py \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
   -o example_out_csv_bam \
-  -t 12 \
+  -t 12
+
+
+#================================================================
+# Test run using uBAM file as input
+#================================================================
+
+# Remove existing output folder
+rm -rf example_out_csv_ubam
+
+# Run pipeline
+python easy_quant.py \
+  -b example_data/example_rna-seq.ubam \
+  -s example_data/ubam_Context_seq.csv \
+  -d 10 \
+  -o example_out_csv_ubam \
+  -t 12

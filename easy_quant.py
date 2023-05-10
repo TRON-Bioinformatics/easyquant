@@ -188,7 +188,8 @@ class Easyquant(object):
 
 
             if self.fq1 and self.fq2:
-
+                # TODO: Test quantification performance / runtime
+                # of outputting unaligned reads
                 align_cmd = "{0} --outFileNamePrefix {1} \
                 --limitOutSAMoneReadBytes 1000000 \
                 --genomeDir {2} \
@@ -198,7 +199,7 @@ class Easyquant(object):
                 --alignEndsType EndToEnd \
                 --outFilterMultimapNmax -1 \
                 --outSAMattributes NH HI AS nM NM MD \
-                --outSAMunmapped None \
+                --outSAMunmapped Within KeepPairs \
                 {5} \
                 --runThreadN {6}".format(
                     self.cfg.get('commands','star'), 
