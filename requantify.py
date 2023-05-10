@@ -238,6 +238,11 @@ class Quantification(object):
         """
 
 
+#        if r1.is_unmapped or r2.is_unmapped:
+#            print(r1)
+#            print(r2)
+#            print(r1.reference_start, r1.reference_end, r1.reference_name, r2.reference_start, r2.reference_end, r2.reference_name)
+        
         read_name = r1.query_name
         seq_name = r1.reference_name
 
@@ -249,27 +254,38 @@ class Quantification(object):
             right_interval = self.seq_to_pos[seq_name][1][0]
 
 
-        r1_start = r1.reference_start
-        r1_stop = r1.reference_end
+        r1_start = -1
+        r1_stop = -1
         r1_pairs = None
-        try:
-            r1_pairs = r1.get_aligned_pairs(with_seq=True)
-        except:
-            logger.error("Not possible to get read information. Skipping...")
-            return
-        r2_start = r2.reference_start
-        r2_stop = r2.reference_end
+        if not r1.is_unmapped:
+            r1_start = r1.reference_start
+            r1_stop = r1.reference_end
+            r1_pairs = None
+            try:
+                r1_pairs = r1.get_aligned_pairs(with_seq=True)
+            except:
+                logger.error("Not possible to get read information. Skipping...")
+                return
+
+        r2_start = -1
+        r2_stop = -1
         r2_pairs = None
-        try:
-            r2_pairs = r2.get_aligned_pairs(with_seq=True)
-        except:
-            logger.error("Not possible to get read information. Skipping...")
-            return
+        if not r2.is_unmapped:
+            r2_start = r2.reference_start
+            r2_stop = r2.reference_end
+            r2_pairs = None
+            try:
+                r2_pairs = r2.get_aligned_pairs(with_seq=True)
+            except:
+                logger.error("Not possible to get read information. Skipping...")
+                return
 
         # Get read information [junc, within, interval]
         r1_info = classify_read(r1_start, r1_stop, r1_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
         r2_info = classify_read(r2_start, r2_stop, r2_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
 
+#        print(r1_info, r2_info)
+        
         if not self.interval_mode:
             self.counts[seq_name][2] = max([r1_info["anchor"], r2_info["anchor"], self.counts[seq_name][2]])
             
