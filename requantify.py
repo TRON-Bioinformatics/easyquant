@@ -74,12 +74,15 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
     Classifies read and returns dict with information on mapping position
     """
 
+    # TODO: Can we extract start and stop position of alignment from aln_pairs to remove redundancy?
+    # Check performance
+    
     # define match bases for get_aligned_pairs()
     MATCH_BASES = ['A', 'C', 'G', 'T']
 
     read_info = {"junc": False, "within": False, "interval": "", "anchor": 0}
 
-    for interval_name, ref_start, ref_stop in intervals:
+    for (interval_name, ref_start, ref_stop) in intervals:
         # Check if read spans ref start
         if aln_start <= ref_stop - bp_dist and aln_stop >= ref_stop + bp_dist:
         
@@ -191,12 +194,17 @@ class Quantification(object):
                 
 
             if r1 and r2:
-                # Ignore unmapped reads and read pairs 
+                # Ignore unmapped read pairs and read pairs 
                 # with unmatching reference or read name
-                if not (r1.is_unmapped or r2.is_unmapped or
-                    r1.query_name != r2.query_name or
-                    r1.reference_name != r2.reference_name):
-                    self.quantify(r1, r2)
+                # TODO: Check if unmapped reference is '*'
+                # and therefore needs more relaxed clause
+                if not (r1.is_unmapped and r2.is_unmapped or
+                    r1.query_name != r2.query_name):
+
+                    if (r1.reference_name == r2.reference_name or
+                        r1.is_unmapped and not r2.is_unmapped or
+                        not r1.is_unmapped and r2.is_unmapped):
+                        self.quantify(r1, r2)
                 r1 = None
                 r2 = None
         logger.info("Quantification done.")
@@ -230,6 +238,11 @@ class Quantification(object):
         """
 
 
+#        if r1.is_unmapped or r2.is_unmapped:
+#            print(r1)
+#            print(r2)
+#            print(r1.reference_start, r1.reference_end, r1.reference_name, r2.reference_start, r2.reference_end, r2.reference_name)
+        
         read_name = r1.query_name
         seq_name = r1.reference_name
 
@@ -241,17 +254,38 @@ class Quantification(object):
             right_interval = self.seq_to_pos[seq_name][1][0]
 
 
-        r1_start = r1.reference_start
-        r1_stop = r1.reference_end
-        r1_pairs = r1.get_aligned_pairs(with_seq=True)
-        r2_start = r2.reference_start
-        r2_stop = r2.reference_end
-        r2_pairs = r2.get_aligned_pairs(with_seq=True)
+        r1_start = -1
+        r1_stop = -1
+        r1_pairs = None
+        if not r1.is_unmapped:
+            r1_start = r1.reference_start
+            r1_stop = r1.reference_end
+            r1_pairs = None
+            try:
+                r1_pairs = r1.get_aligned_pairs(with_seq=True)
+            except:
+                logger.error("Not possible to get read information. Skipping...")
+                return
+
+        r2_start = -1
+        r2_stop = -1
+        r2_pairs = None
+        if not r2.is_unmapped:
+            r2_start = r2.reference_start
+            r2_stop = r2.reference_end
+            r2_pairs = None
+            try:
+                r2_pairs = r2.get_aligned_pairs(with_seq=True)
+            except:
+                logger.error("Not possible to get read information. Skipping...")
+                return
 
         # Get read information [junc, within, interval]
         r1_info = classify_read(r1_start, r1_stop, r1_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
         r2_info = classify_read(r2_start, r2_stop, r2_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
 
+#        print(r1_info, r2_info)
+        
         if not self.interval_mode:
             self.counts[seq_name][2] = max([r1_info["anchor"], r2_info["anchor"], self.counts[seq_name][2]])
             

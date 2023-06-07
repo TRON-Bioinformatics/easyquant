@@ -35,6 +35,7 @@ class Easyquant(object):
     def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode):
 
         self.working_dir = os.path.abspath(working_dir)
+        self.module_dir = os.path.dirname(os.path.realpath(__file__))
         IOMethods.create_folder(self.working_dir)
 
         logfile = os.path.join(self.working_dir, 'run.log')
@@ -188,7 +189,8 @@ class Easyquant(object):
 
 
             if self.fq1 and self.fq2:
-
+                # TODO: Test quantification performance / runtime
+                # of outputting unaligned reads / singletons
                 align_cmd = "{0} --outFileNamePrefix {1} \
                 --limitOutSAMoneReadBytes 1000000 \
                 --genomeDir {2} \
@@ -198,7 +200,9 @@ class Easyquant(object):
                 --alignEndsType EndToEnd \
                 --outFilterMultimapNmax -1 \
                 --outSAMattributes NH HI AS nM NM MD \
-                --outSAMunmapped None \
+                --outSAMunmapped Within KeepPairs \
+                --outFilterScoreMinOverLread 0.3 \
+                --outFilterMatchNminOverLread 0.3 \
                 {5} \
                 --runThreadN {6}".format(
                     self.cfg.get('commands','star'), 
@@ -249,7 +253,7 @@ class Easyquant(object):
             interval_mode_str = " --interval_mode"
 
         quant_cmd = "{0} -i {1} -t {2} -d {3} -o {4}{5}{6}".format(
-            self.cfg.get('commands', 'quantification'),
+            os.path.join(self.module_dir, "requantify.py"),
             sam_file,
             self.seq_tab,
             self.bp_distance,

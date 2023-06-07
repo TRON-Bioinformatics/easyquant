@@ -26,23 +26,22 @@ breakpoint (spanning pairs).
    - pysam (>= 0.16.0.1)
  - STAR (>= 2.7.8a)
  - samtools (>= 1.9)
+ - bowtie2 (>= 2.4.4)
+ - bwa (>= 0.7.17)
  
 ## Installation
 
 ```
 git clone https://github.com/TRON-Bioinformatics/easyquant.git
-```
 
-```
 mv config.ini.sample config.ini
+
+# If you have conda installed you can simply install the environment like this
+conda env create -f environment.yml
+
+# Otherwise you have to adjust the path to the different tools in your config.ini
 ```
 
-Update `config.ini` with installation paths
-
-```
-samtools_cmd=/path/to/samtools/1.9/samtools
-star_cmd=/path/to/STAR/2.7.8a/bin/Linux_x86_64_static/STAR
-```
 
 ## Usage
 
