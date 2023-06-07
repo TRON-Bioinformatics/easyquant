@@ -2,8 +2,7 @@
 version=0.4.1
 
 [commands]
-samtools=/path/to/samtools
-star=/path/to/STAR
-bwa=/path/to/bwa
-bowtie2=/path/to/bowtie2
-quantification=/path/to/easyquant/requantify.py
+samtools=samtools
+star=STAR
+bwa=bwa
+bowtie2=bowtie2
