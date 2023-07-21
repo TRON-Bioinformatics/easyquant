@@ -238,7 +238,7 @@ class Easyquant(object):
                 --limitOutSAMoneReadBytes 1000000 \
                 --genomeDir {2} \
                 --readFilesType SAM PE \
-                --readFilesCommand 'samtools view' \
+                --readFilesCommand '{6} view' \
                 --readFilesIn {3} \
                 --bamRemoveDuplicatesType UniqueIdenticalNotMulti \
                 --outSAMmode Full \
@@ -253,7 +253,8 @@ class Easyquant(object):
                     genome_path, 
                     self.bam,
                     star_cmd_params,
-                    num_threads
+                    num_threads,
+                    self.cfg.get('commands', 'samtools')
                 )
             clean_up_files.extend([
                 "{}/Log.progress.out".format(align_path),

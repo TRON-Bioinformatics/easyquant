@@ -107,6 +107,39 @@ python easy_quant.py \
 
 
 #================================================================
+# Test run keeping alignment as BAM
+#================================================================
+
+# Remove existing output folder
+rm -rf example_out_keep_bam
+
+# Run pipeline
+python easy_quant.py \
+  -b example_data/example_rna-seq.bam \
+  -s example_data/CLDN18_Context_seq.csv \
+  -d 10 \
+  -o example_out_keep_bam \
+  -t 12 \
+  --keep_bam
+
+#================================================================
+# Test run without clean up step
+#================================================================
+
+# Remove existing output folder
+rm -rf example_out_keep_all
+
+# Run pipeline
+python easy_quant.py \
+  -b example_data/example_rna-seq.bam \
+  -s example_data/CLDN18_Context_seq.csv \
+  -d 10 \
+  -o example_out_keep_all \
+  -t 12 \
+  --keep_all
+
+
+#================================================================
 # Test run using uBAM file as input
 #================================================================
 

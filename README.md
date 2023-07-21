@@ -73,6 +73,10 @@ optional arguments:
                         Specify number of threads to use for the alignment
   --star_cmd_params STAR_CMD_PARAMS
                         Specify STAR commandline parameters to use for the alignment
+  --keep_bam
+                        Do not delete alignment in BAM format during clean up step
+  --keep_all
+                        Do not perform clean up step after re-quantification
 
 ```
 
@@ -92,7 +96,7 @@ python easy_quant.py \
   -o example_out \
   -m star \
   -t 6
-  [--interval-mode]
+  [--interval_mode]
 ```
 
 BAM as input:
@@ -105,7 +109,7 @@ python easy_quant.py \
   -o example_out \
   -m star \
   -t 6
-  [--interval-mode]
+  [--interval_mode]
 ```
 
 
