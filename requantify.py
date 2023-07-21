@@ -5,7 +5,7 @@ import csv
 import logging
 import os
 import sys
-
+import gzip
 import pysam
 
 csv.field_size_limit(sys.maxsize)
@@ -127,8 +127,8 @@ class Quantification(object):
         self.bam_file = bam_file
         self.output_path = os.path.abspath(output_path)
         self.quant_file = os.path.join(output_path, "quantification.tsv")
-        self.reads_file = os.path.join(output_path, "read_info.tsv")
-        self.reads_out = open(self.reads_file, "w")
+        self.reads_file = os.path.join(output_path, "read_info.tsv.gz")
+        self.reads_out = gzip.open(self.reads_file, "wb")
         self.bp_dist = bp_dist
         self.allow_mismatches = allow_mismatches
         self.interval_mode = interval_mode
@@ -371,8 +371,8 @@ class Quantification(object):
             r1_type = "softjunc"
         if not r2_type:
             r2_type = "softjunc"
-        self.reads_out.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(read_name, "R1", seq_name, r1_start, r1_stop, r1_type))
-        self.reads_out.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(read_name, "R2", seq_name, r2_start, r2_stop, r2_type))
+        self.reads_out.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(read_name, "R1", seq_name, r1_start, r1_stop, r1_type).encode())
+        self.reads_out.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(read_name, "R2", seq_name, r2_start, r2_stop, r2_type).encode())
 
 
     def write_results(self):
