@@ -27,12 +27,11 @@ def __get_read_count_bam(bam_file, tool):
     """Parses input BAM to get read count"""
     result = subprocess.check_output([tool, "view", "-c", bam_file])
     return int(result)
-    
 
 
 class Easyquant(object):
     
-    def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode):
+    def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode, keep_bam, keep_all):
 
         self.working_dir = os.path.abspath(working_dir)
         self.module_dir = os.path.dirname(os.path.realpath(__file__))
@@ -71,7 +70,8 @@ class Easyquant(object):
         self.bp_distance = bp_distance
         self.allow_mismatches = allow_mismatches
         self.interval_mode = interval_mode
-
+        self.keep_bam = keep_bam
+        self.keep_all = keep_all
 
     def run(self, method, num_threads, star_cmd_params):
         """This function runs the pipeline on paired-end FASTQ files."""
@@ -120,6 +120,11 @@ class Easyquant(object):
             bam_file = os.path.join(align_path, "Processed.out.bam")
         quant_file = os.path.join(self.working_dir, "quantification.tsv")
         num_reads_file = os.path.join(self.working_dir, "num_reads.txt")
+        # Define files to be deleted after successful run
+        clean_up_files = [genome_path, fasta_file, sam_file]
+        if not self.keep_bam:
+            clean_up_files.append(bam_file)
+            clean_up_files.append("{}.bai".format(bam_file))
         
         #create folders
         IOMethods.create_folder(genome_path)
@@ -139,37 +144,50 @@ class Easyquant(object):
         index_cmd = None
         align_cmd = None
         quant_cmd = None
+        clean_cmd = None
 
 
         if method == "bowtie2":
+            bowtie_align_log = os.path.join(align_path, "bowtie_log.txt")
             index_cmd = "{0}-build {1} {2}/bowtie".format(
                 self.cfg.get('commands', 'bowtie2'), 
                 fasta_file, 
                 genome_path
             )
-            align_cmd = "{0} -p {1} -x {2}/bowtie -1 {3} -2 {4} -S {5}".format(
+            align_cmd = "{0} -p {1} -x {2}/bowtie -1 {3} -2 {4} -S {5} 2> {6}".format(
                 self.cfg.get('commands', 'bowtie2'),
                 num_threads,
                 genome_path,
                 self.fq1,
                 self.fq2,
-                sam_file
+                sam_file,
+                bowtie_align_log
             )
 
         elif method == "bwa":
             genome_path = fasta_file
+            bwa_log_file = os.path.join(align_path, "bwa_mem_log.txt")
             index_cmd = "{0} index {1}".format(
                 self.cfg.get('commands', 'bwa'), 
                 fasta_file
             )
-            align_cmd = "{0} mem -t {1} {2} {3} {4} > {5}".format(
+            align_cmd = "{0} mem -t {1} {2} {3} {4} > {5} 2> {6}".format(
                 self.cfg.get('commands', 'bwa'), 
                 num_threads,
                 genome_path, 
                 self.fq1, 
                 self.fq2, 
-                sam_file
+                sam_file,
+                bwa_log_file
             )
+            # Add index files from bwa
+            clean_up_files.extend([
+                "{}.amb".format(fasta_file),
+                "{}.ann".format(fasta_file),
+                "{}.bwt".format(fasta_file),
+                "{}.pac".format(fasta_file),
+                "{}.sa".format(fasta_file)
+            ])
 
         elif method == "star":
             fasta_size = IOMethods.get_fasta_size(fasta_file)
@@ -220,7 +238,7 @@ class Easyquant(object):
                 --limitOutSAMoneReadBytes 1000000 \
                 --genomeDir {2} \
                 --readFilesType SAM PE \
-                --readFilesCommand 'samtools view' \
+                --readFilesCommand '{6} view' \
                 --readFilesIn {3} \
                 --bamRemoveDuplicatesType UniqueIdenticalNotMulti \
                 --outSAMmode Full \
@@ -235,8 +253,14 @@ class Easyquant(object):
                     genome_path, 
                     self.bam,
                     star_cmd_params,
-                    num_threads
+                    num_threads,
+                    self.cfg.get('commands', 'samtools')
                 )
+            clean_up_files.extend([
+                "{}/Log.progress.out".format(align_path),
+                "{}/SJ.out.tab".format(align_path),
+                "{}/_STARtmp".format(align_path),
+            ])
 
 
         sam_to_bam_cmd = "{0} sort -o {2} {1} && {0} index {2}".format(
@@ -262,6 +286,9 @@ class Easyquant(object):
             interval_mode_str
         )
 
+        clean_cmd = "for file in {}; \
+            do {{ test -f $file && rm $file; }} || \
+            {{ test -d $file && rm -r $file; }} done".format(" ".join(clean_up_files))
 
         # define bash script in working directory    
         shell_script = os.path.join(self.working_dir, "requant.sh")
@@ -280,7 +307,10 @@ class Easyquant(object):
             out_shell.write("echo \"Starting alignment\"\n")
             out_shell.write("{}\n".format(align_cmd))
             out_shell.write("echo \"Starting quantification\"\n")
-            out_shell.write("{}\n".format(quant_cmd))
+            if not self.keep_all:
+                out_shell.write("{}\n".format(quant_cmd))
+                out_shell.write("echo \"Starting cleanup step\"\n")
+            out_shell.write("{}\n".format(clean_cmd))
             out_shell.write("echo \"Processing done!\"\n")
 
 
@@ -294,6 +324,11 @@ class Easyquant(object):
 
         if not os.path.exists(quant_file) or os.stat(quant_file).st_size == 0:
             IOMethods.execute_cmd(quant_cmd)
+    
+        if not self.keep_all:
+            IOMethods.execute_cmd(clean_cmd)
+
+
 
 
         logging.info("Processing complete for {}".format(self.working_dir))
@@ -314,6 +349,9 @@ def main():
     parser.add_argument("-m", "--method", dest="method", choices=["star", "bowtie2", "bwa"], help="Specify alignment software to generate the index", default="star")
     parser.add_argument("-t", "--threads", dest="num_threads", type=int, help="Specify number of threads to use for the alignment", default=1)
     parser.add_argument("--star_cmd_params", dest="star_cmd_params", help="Specify STAR commandline parameters to use for the alignment", default="")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--keep_bam", dest="keep_alignment", help="Do not delete alignment in BAM format during clean up step", action="store_true")
+    group.add_argument("--keep_all", dest="keep_all", help="Do not perform clean up step after re-quantification", action="store_true")
     args = parser.parse_args()
 
 
@@ -328,8 +366,7 @@ def main():
         if args.fq1 or args.fq2:
             parser.error("argument -b/--bam_file: not allowed with argument -1/--fq1 or -2/--fq2")
 
-
-    eq = Easyquant(args.fq1, args.fq2, args.bam, args.seq_tab, args.bp_distance, args.output_folder, args.allow_mismatches, args.interval_mode)
+    eq = Easyquant(args.fq1, args.fq2, args.bam, args.seq_tab, args.bp_distance, args.output_folder, args.allow_mismatches, args.interval_mode, args.keep_alignment, args.keep_all)
     eq.run(args.method, args.num_threads, args.star_cmd_params)
 
 
