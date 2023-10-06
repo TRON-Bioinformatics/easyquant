@@ -3,14 +3,9 @@
 import os
 import unittest
 
-from requantify import perc_true
-from requantify import mean
-from requantify import median
-from requantify import get_seq_to_pos
-from requantify import classify_read
-
-
 SEQ_TABLE_FILE = os.path.join(os.path.dirname(__file__), "example_data", "CLDN18_Context_seq.csv")
+
+from easy_quant.requantify import perc_true, mean, median, get_seq_to_pos, classify_read
 
 
 class TestRequantify(unittest.TestCase):

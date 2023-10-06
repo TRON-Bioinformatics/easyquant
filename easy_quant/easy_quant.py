@@ -8,7 +8,7 @@ import os
 import subprocess
 import sys
 
-import io_methods as IOMethods
+import easy_quant.io_methods as IOMethods
 
 
 def get_read_count(infile, tool, format="fq"):

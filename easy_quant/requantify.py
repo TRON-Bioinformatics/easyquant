@@ -2,11 +2,11 @@
 
 from argparse import ArgumentParser
 import csv
+import gzip
 import logging
 import os
-import sys
-import gzip
 import pysam
+import sys
 
 csv.field_size_limit(sys.maxsize)
 
