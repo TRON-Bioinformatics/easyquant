@@ -429,23 +429,56 @@ class Quantification(object):
                     out_line = "\t".join(sp_out) + "\n"
                     out_handle.write(out_line)
 
-    
-
-def main():
-    """Parse command line arguments and start script"""
-    parser = ArgumentParser(description="Generate mapping stats for fusion detection")
-    parser.add_argument('-i', '--input_bam', dest='input_bam', help='Input BAM file', required=True)
-    parser.add_argument('-t', '--seq_table', dest='seq_table_file', help='Path to input sequence table', required=True)
-    parser.add_argument('-o', '--output_path', dest='output_path', help='Output path where results are stored', default="test_out")
-    parser.add_argument('-d', '--bp_distance', dest='bp_distance', type=int, default=10,
-                        help='Distance around postion of interest for junction read counts.')
-    parser.add_argument('--allow_mismatches', dest='allow_mismatches', action='store_true', help='Allow mismatches within the region around the breakpoint determined by the bp_distance parameter')
-    parser.add_argument('--interval_mode', dest='interval_mode', action='store_true', help='Specify if interval mode shall be used')
-    args = parser.parse_args()
 
 
-    q = Quantification(args.seq_table_file, args.input_bam, args.output_path, args.bp_distance, args.allow_mismatches, args.interval_mode)
-    
+def add_requantify_args(parser):
+    """Add arguments for requantification to a parser"""
+    parser.add_argument(
+        "-i",
+        "--input_bam",
+        dest="input_bam",
+        help="Input BAM file",
+        required=True
+    )
+    parser.add_argument(
+        "-t",
+        "--seq_table",
+        dest="seq_table_file",
+        help="Path to input sequence table",
+        required=True
+    )
+    parser.add_argument(
+        "-o",
+        "--output_path",
+        dest="output_path",
+        help="Output path where results are stored",
+        default="test_out"
+    )
+    parser.add_argument(
+        "-d",
+        "--bp_distance",
+        dest="bp_distance",
+        type=int,
+        default=10,
+        help="Distance around postion of interest for junction read counts."
+    )
+    parser.add_argument(
+        "--allow_mismatches",
+        dest="allow_mismatches",
+        action="store_true",
+        help="Allow mismatches within the region around the breakpoint determined by the bp_distance parameter"
+    )
+    parser.add_argument(
+        "--interval_mode",
+        dest="interval_mode",
+        action="store_true",
+        help="Specify if interval mode shall be used"
+    )
+    parser.set_defaults(func=requantify_command)
 
-if __name__ == "__main__":
-    main()
+
+def requantify_command(args):
+    """Run requantification from command line"""
+    # seq_table_file, bam_file, output_path, bp_dist, allow_mismatches, interval_mode
+    requant = Quantification(args.seq_table_file, args.input_bam, args.output_path, args.bp_distance, args.allow_mismatches, args.interval_mode)
+    requant.run()

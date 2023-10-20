@@ -4,8 +4,9 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - python=3.9
   - bowtie2=2.4.4
   - bwa=0.7.17
-  - pysam=0.21.0
+  - pysam=0.19.1
   - samtools=1.9
   - star=2.7.8a

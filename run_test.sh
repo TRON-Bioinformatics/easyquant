@@ -8,7 +8,7 @@
 rm -rf example_out_csv
 
 # Run pipeline
-python easy_quant.py \
+easy_quant \
   -1 example_data/example_rna-seq_R1_001.fastq.gz \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \

@@ -116,19 +116,35 @@ def plot(seq_to_pos, read_info, output_path):
     pdf.close()
 
 
-def main():
-    """Parse command line arguments and start script"""
-    parser = ArgumentParser(description="Generate mapping stats for fusion detection")
-    parser.add_argument('-i', '--input_read_info', dest='input_read_info', help='Input read info file', required=True)
-    parser.add_argument('-t', '--seq_table', dest='seq_table_file', help='Path to input sequence table', required=True)
-    parser.add_argument('-o', '--output', dest='output', help='Output file', required=True)
-    args = parser.parse_args()
+def add_plot_reads_args(parser):
+    """Add arguments for read plotting to a parser"""
+    parser.add_argument(
+        "-i",
+        "--input_read_info",
+        dest="input_read_info",
+        help="Input read info file",
+        required=True
+    )
+    parser.add_argument(
+        "-t",
+        "--seq_table",
+        dest="seq_table_file",
+        help="Path to input sequence table",
+        required=True
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        dest="output",
+        help="Output file",
+        required=True
+    )
 
+    
+def plot_reads_command(args):
+    """Run read plotting from command line"""
     # parse sequence names and position of interest
     seq_to_pos = get_seq_to_pos(args.seq_table_file)
 
     plot(seq_to_pos, args.input_read_info, args.output)
-
-
-if __name__ == "__main__":
-    main()
+    

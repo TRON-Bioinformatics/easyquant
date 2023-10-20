@@ -1,8 +1,8 @@
 from setuptools import find_packages, setup
 import easy_quant
+from easy_quant.version import version
 
-
-VERSION = easy_quant.VERSION
+#VERSION = version
 
 
 # parses requirements from file
@@ -15,19 +15,17 @@ with open("README.md", "r", encoding="utf-8") as f:
 # Build the Python package
 setup(
     name='easy_quant',
-    version=VERSION,
+    version=version,
     packages=find_packages(exclude=["legacy"]),
     entry_points={
         'console_scripts': [
-            'easy_quant_requantify=easy_quant.requantify:main',
-            'easy_plot_reads=easy_quant.plot_reads:main',
-            'easy_quant=easy_quant.easy_quant:main',
+            'easy_quant=easy_quant.command_line:easy_quant_cli',
         ],
     },
     author="TRON - Translational Oncology at the University Medical Center of the Johannes Gutenberg University Mainz"
     "- Computational Medicine group",
     author_email='patrick.sorn@tron-mainz.de',
-    description='Quantify ... [TODO]',
+    description='Quantification of reads at defined positions to verify custom input sequences. Given a gene fusion or splicing junction of interest, this tool can quantify RNA-seq reads supporting the breakpoint (or splice junction) by quantifying reads that map to the breakpoint (junction reads) and read pairs that span the breakpoint (spanning pairs).',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/tron-bioinformatics/easyquant",

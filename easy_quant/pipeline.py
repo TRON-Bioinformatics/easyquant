@@ -29,7 +29,7 @@ def __get_read_count_bam(bam_file, tool):
     return int(result)
 
 
-class Easyquant(object):
+class Pipeline(object):
     
     def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode, keep_bam, keep_all):
 
@@ -335,40 +335,97 @@ class Easyquant(object):
 
 
 
-def main():
-    parser = ArgumentParser(description="Processing of demultiplexed FASTQs")
-    
-    parser.add_argument("-1", "--fq1", dest="fq1", help="Specify path to Read 1 (R1) FASTQ file")
-    parser.add_argument("-2", "--fq2", dest="fq2", help="Specify path to Read 2 (R2) FASTQ file")
-    parser.add_argument("-b", "--bam_file", dest="bam", help="Specify path to input BAM file as alternative to FASTQ input")
-    parser.add_argument("-s", "--sequence_tab", dest="seq_tab", help="Specify the reference sequences as table with colums name, sequence, and position", required=True)
-    parser.add_argument("-o", "--output-folder", dest="output_folder", help="Specify the folder to save the results into.", required=True)
-    parser.add_argument("-d", "--bp_distance", dest="bp_distance", type=int, help="Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting", default=10)
-    parser.add_argument("--allow_mismatches", dest="allow_mismatches", action="store_true", help="Allow mismatches within the region around the breakpoint determined by the bp_distance parameter")
-    parser.add_argument("--interval_mode", dest="interval_mode", action="store_true", help="Specify if interval mode shall be used")
-    parser.add_argument("-m", "--method", dest="method", choices=["star", "bowtie2", "bwa"], help="Specify alignment software to generate the index", default="star")
-    parser.add_argument("-t", "--threads", dest="num_threads", type=int, help="Specify number of threads to use for the alignment", default=1)
-    parser.add_argument("--star_cmd_params", dest="star_cmd_params", help="Specify STAR commandline parameters to use for the alignment", default="")
+def add_pipeline_args(parser):
+    parser.add_argument(
+        "-1",
+        "--fq1",
+        dest="fq1",
+        help="Specify path to Read 1 (R1) FASTQ file"
+    )
+    parser.add_argument(
+        "-2",
+        "--fq2",
+        dest="fq2",
+        help="Specify path to Read 2 (R2) FASTQ file"
+    )
+    parser.add_argument(
+        "-b",
+        "--bam_file",
+        dest="bam",
+        help="Specify path to input BAM file as alternative to FASTQ input"
+    )
+    parser.add_argument(
+        "-s",
+        "--sequence_tab",
+        dest="seq_tab",
+        help="Specify the reference sequences as table with colums name, sequence, and position",
+        required=True
+    )
+    parser.add_argument(
+        "-o",
+        "--output-folder",
+        dest="output_folder",
+        help="Specify the folder to save the results into.",
+        required=True
+    )
+    parser.add_argument(
+        "-d",
+        "--bp_distance",
+        dest="bp_distance",
+        type=int,
+        help="Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting",
+        default=10
+    )
+    parser.add_argument(
+        "--allow_mismatches",
+        dest="allow_mismatches",
+        action="store_true",
+        help="Allow mismatches within the region around the breakpoint determined by the bp_distance parameter"
+    )
+    parser.add_argument(
+        "--interval_mode",
+        dest="interval_mode",
+        action="store_true",
+        help="Specify if interval mode shall be used"
+    )
+    parser.add_argument(
+        "-m",
+        "--method",
+        dest="method",
+        choices=["star", "bowtie2", "bwa"],
+        help="Specify alignment software to generate the index",
+        default="star"
+    )
+    parser.add_argument(
+        "-t",
+        "--threads",
+        dest="num_threads",
+        type=int,
+        help="Specify number of threads to use for the alignment",
+        default=1
+    )
+    parser.add_argument(
+        "--star_cmd_params",
+        dest="star_cmd_params",
+        help="Specify STAR commandline parameters to use for the alignment",
+        default=""
+    )
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--keep_bam", dest="keep_alignment", help="Do not delete alignment in BAM format during clean up step", action="store_true")
-    group.add_argument("--keep_all", dest="keep_all", help="Do not perform clean up step after re-quantification", action="store_true")
-    args = parser.parse_args()
+    group.add_argument(
+        "--keep_bam",
+        dest="keep_alignment",
+        help="Do not delete alignment in BAM format during clean up step",
+        action="store_true"
+    )
+    group.add_argument(
+        "--keep_all",
+        dest="keep_all",
+        help="Do not perform clean up step after re-quantification",
+        action="store_true"
+    )
+    parser.set_defaults(func=pipeline_command)
 
 
-    if not args.bam:
-        if args.fq1 and not args.fq2:
-            parser.error("--fq1 requires --fq2")
-        elif not args.fq1 and args.fq2:
-            parser.error("--fq2 requires --fq1")
-    else:
-        if args.method != "star":
-            parser.error("argument -b/--bam_file: only allowed with argument -m/--method == star")
-        if args.fq1 or args.fq2:
-            parser.error("argument -b/--bam_file: not allowed with argument -1/--fq1 or -2/--fq2")
-
-    eq = Easyquant(args.fq1, args.fq2, args.bam, args.seq_tab, args.bp_distance, args.output_folder, args.allow_mismatches, args.interval_mode, args.keep_alignment, args.keep_all)
-    eq.run(args.method, args.num_threads, args.star_cmd_params)
-
-
-if __name__ == "__main__":
-    main()
+def pipeline_command(args):
+    pipe = Pipeline(args.fq1, args.fq2, args.bam, args.seq_tab, args.bp_distance, args.output_folder, args.allow_mismatches, args.interval_mode, args.keep_alignment, args.keep_all)
+    pipe.run(args.method, args.num_threads, args.star_cmd_params)
