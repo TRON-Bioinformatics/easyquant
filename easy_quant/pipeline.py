@@ -363,7 +363,7 @@ def add_pipeline_args(parser):
     )
     parser.add_argument(
         "-o",
-        "--output-folder",
+        "--output_folder",
         dest="output_folder",
         help="Specify the folder to save the results into.",
         required=True
