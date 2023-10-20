@@ -28,40 +28,63 @@ def get_align_cmd_bwa(fq1, fq2, index_dir, out_sam, num_threads):
     return cmd
 
 
-def get_align_cmd_star(fq1, fq2, index_dir, out_sam, num_threads, custom_params):
-    cmd = "STAR --outFileNamePrefix {0} \
-    --limitOutSAMoneReadBytes 1000000 \
-    --genomeDir {1} \
-    --readFilesCommand 'gzip -d -c -f' \
-    --readFilesIn {2} {3} \
-    --outSAMmode Full \
-    --alignEndsType EndToEnd \
-    --outFilterMultimapNmax -1 \
-    --outSAMattributes NH HI AS nM NM MD \
-    --outSAMunmapped Within KeepPairs \
-    --outFilterScoreMinOverLread 0.3 \
-    --outFilterMatchNminOverLread 0.3 \
-    {4} \
-    --runThreadN {5}".format(
-        out_sam, 
-        index_dir, 
-        fq1,
-        fq2,
-        custom_params,
-        num_threads
-    )
-
+def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params):
+    cmd = ""
+    if fq1 and fq2:
+        cmd = "STAR --outFileNamePrefix {0} \
+        --limitOutSAMoneReadBytes 1000000 \
+        --genomeDir {1} \
+        --readFilesCommand 'gzip -d -c -f' \
+        --readFilesIn {2} {3} \
+        --outSAMmode Full \
+        --alignEndsType EndToEnd \
+        --outFilterMultimapNmax -1 \
+        --outSAMattributes NH HI AS nM NM MD \
+        --outSAMunmapped Within KeepPairs \
+        --outFilterScoreMinOverLread 0.3 \
+        --outFilterMatchNminOverLread 0.3 \
+        {4} \
+        --runThreadN {5}".format(
+            out_dir,
+            index_dir,
+            fq1,
+            fq2,
+            custom_params,
+            num_threads
+        )
+    elif not fq1 and not fq2 and bam:
+        cmd = "STAR --outFileNamePrefix {0} \
+        --runMode alignReads \
+        --limitOutSAMoneReadBytes 1000000 \
+        --genomeDir {1} \
+        --readFilesType SAM PE \
+        --readFilesCommand 'samtools view' \
+        --readFilesIn {2} \
+        --bamRemoveDuplicatesType UniqueIdenticalNotMulti \
+        --outSAMmode Full \
+        --alignEndsType EndToEnd \
+        --outFilterMultimapNmax -1 \
+        --outSAMattributes NH HI AS nM NM MD \
+        --outSAMunmapped None \
+        {3} \
+        --runThreadN {4}".format(
+            out_dir,
+            index_dir,
+            bam,
+            custom_params,
+            num_threads
+        )
 
     return cmd
 
 
-def run(fq1, fq2, index_dir, out_path, threads, method, params):
+def run(fq1, fq2, bam, index_dir, out_path, threads, method, params):
     if method == "bowtie2":
         subprocess.run(get_align_cmd_bowtie2(fq1, fq2, index_dir, out_path, threads).split(" "))
     elif method == "bwa":
         subprocess.run(get_align_cmd_bwa(fq1, fq2, index_dir, out_path, threads).split(" "))
     elif method == "star":
-        subprocess.run(get_align_cmd_star(fq1, fq2, index_dir, out_path, threads, params).split(" "))
+        subprocess.run(get_align_cmd_star(fq1, fq2, bam, index_dir, out_path, threads, params).split(" "))
 
 
 def add_aligner_args(parser):
@@ -69,15 +92,19 @@ def add_aligner_args(parser):
         "-1",
         "--fq1",
         dest="fq1",
-        help="Specify FQ1",
-        required=True
+        help="Specify FQ1"
     )
     parser.add_argument(
         "-2",
         "--fq2",
         dest="fq2",
-        help="Specify FQ2",
-        required=True
+        help="Specify FQ2"
+    )
+    parser.add_argument(
+        "-b",
+        "--bam",
+        dest="bam",
+        help="Specify unaligned input BAM file"
     )
     parser.add_argument(
         "-i",
@@ -118,4 +145,4 @@ def add_aligner_args(parser):
 
 
 def alignment_command(args):
-    run(args.fq1, args.fq2, args.index_dir, args.output_path, args.threads, args.method, args.params)
+    run(args.fq1, args.fq2, args.bam, args.index_dir, args.output_path, args.threads, args.method, args.params)

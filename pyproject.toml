@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "easy_quant"
+version = "0.5.0"
+authors = [
+  {name = "Patrick Sorn", email = "patrick.sorn@tron-mainz.de"},
+  {name = "Jonas Ibn-Salem", email = "jonas.ibn-salem@tron-mainz.de"},
+  {name = "Franziska Lang", email = "franziska.lang@tron-mainz.de"},
+]
+maintainers = [
+  {name = "Patrick Sorn", email = "patrick.sorn@tron-mainz.de"},
+]
+description = 'Quantification of reads at defined positions to verify custom input sequences. Given a gene fusion or splicing junction of interest, this tool can quantify RNA-seq reads supporting the breakpoint (or splice junction) by quantifying reads that map to the breakpoint (junction reads) and read pairs that span the breakpoint (spanning pairs).'
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Intended Audience :: Healthcare Industry',
+    'Intended Audience :: Science/Research',
+    'Topic :: Scientific/Engineering :: Bio-Informatics',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3 :: Only',
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Unix"
+]
+dynamic = ["dependencies"]
+
+[tool.setuptools]
+py-modules = []
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+Homepage = "https://github.com/tron-bioinformatics/easyquant"
+
+[project.scripts]
+easy_quant = "easy_quant.command_line:easy_quant_cli"

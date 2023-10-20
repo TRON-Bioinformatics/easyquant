@@ -130,8 +130,6 @@ class Pipeline(object):
         IOMethods.create_folder(genome_path)
         IOMethods.create_folder(align_path)
 
-        IOMethods.csv_to_fasta(self.seq_tab, fasta_file)
-
 
         if not os.path.exists(num_reads_file) or os.stat(num_reads_file).st_size == 0:
             with open(num_reads_file, "w") as outf:
@@ -140,46 +138,33 @@ class Pipeline(object):
                 elif self.bam:
                     outf.write(str(int(get_read_count(self.bam, self.cfg.get('commands', 'samtools'), "bam"))))
 
+        csv_to_fasta_cmd = "easy_quant csv2fasta \
+        --input_csv {} \
+        --output_fasta {}".format(
+            self.seq_tab,
+            fasta_file
+        )
 
-        index_cmd = None
-        align_cmd = None
-        quant_cmd = None
-        clean_cmd = None
+        index_cmd = "easy_quant index \
+        --input_fasta {} \
+        --index_dir {} \
+        -t {} \
+        --method {}".format(
+            fasta_file,
+            genome_path,
+            num_threads,
+            method
+        )
+        align_cmd = "easy_quant align --fq1 {} --fq2 {} --index_dir {} --output_path {} -t {} -m {}".format(
+            self.fq1,
+            self.fq2,
+            genome_path,
+            sam_file,
+            num_threads,
+            method
+        )
 
-
-        if method == "bowtie2":
-            bowtie_align_log = os.path.join(align_path, "bowtie_log.txt")
-            index_cmd = "{0}-build {1} {2}/bowtie".format(
-                self.cfg.get('commands', 'bowtie2'), 
-                fasta_file, 
-                genome_path
-            )
-            align_cmd = "{0} -p {1} -x {2}/bowtie -1 {3} -2 {4} -S {5} 2> {6}".format(
-                self.cfg.get('commands', 'bowtie2'),
-                num_threads,
-                genome_path,
-                self.fq1,
-                self.fq2,
-                sam_file,
-                bowtie_align_log
-            )
-
-        elif method == "bwa":
-            genome_path = fasta_file
-            bwa_log_file = os.path.join(align_path, "bwa_mem_log.txt")
-            index_cmd = "{0} index {1}".format(
-                self.cfg.get('commands', 'bwa'), 
-                fasta_file
-            )
-            align_cmd = "{0} mem -t {1} {2} {3} {4} > {5} 2> {6}".format(
-                self.cfg.get('commands', 'bwa'), 
-                num_threads,
-                genome_path, 
-                self.fq1, 
-                self.fq2, 
-                sam_file,
-                bwa_log_file
-            )
+        if method == "bwa":
             # Add index files from bwa
             clean_up_files.extend([
                 "{}.amb".format(fasta_file),
@@ -190,72 +175,6 @@ class Pipeline(object):
             ])
 
         elif method == "star":
-            fasta_size = IOMethods.get_fasta_size(fasta_file)
-            sa_index_nbases = min(14, max(4, int(math.log(fasta_size) / 2 - 1)))
-            index_cmd = "{0} --runMode genomeGenerate \
-            --limitGenomeGenerateRAM 40000000000 \
-            --runThreadN {1} \
-            --genomeSAindexNbases {2} \
-            --genomeDir {3} \
-            --genomeFastaFiles {4}".format(
-                self.cfg.get('commands','star'), 
-                num_threads,
-                sa_index_nbases, 
-                genome_path, 
-                fasta_file
-            )
-
-
-            if self.fq1 and self.fq2:
-                # TODO: Test quantification performance / runtime
-                # of outputting unaligned reads / singletons
-                align_cmd = "{0} --outFileNamePrefix {1} \
-                --limitOutSAMoneReadBytes 1000000 \
-                --genomeDir {2} \
-                --readFilesCommand 'gzip -d -c -f' \
-                --readFilesIn {3} {4} \
-                --outSAMmode Full \
-                --alignEndsType EndToEnd \
-                --outFilterMultimapNmax -1 \
-                --outSAMattributes NH HI AS nM NM MD \
-                --outSAMunmapped Within KeepPairs \
-                --outFilterScoreMinOverLread 0.3 \
-                --outFilterMatchNminOverLread 0.3 \
-                {5} \
-                --runThreadN {6}".format(
-                    self.cfg.get('commands','star'), 
-                    align_path + "/", 
-                    genome_path, 
-                    self.fq1,
-                    self.fq2,
-                    star_cmd_params,
-                    num_threads
-                )
-
-            elif self.bam:
-                align_cmd = "{0} --outFileNamePrefix {1} \
-                --runMode alignReads \
-                --limitOutSAMoneReadBytes 1000000 \
-                --genomeDir {2} \
-                --readFilesType SAM PE \
-                --readFilesCommand '{6} view' \
-                --readFilesIn {3} \
-                --bamRemoveDuplicatesType UniqueIdenticalNotMulti \
-                --outSAMmode Full \
-                --alignEndsType EndToEnd \
-                --outFilterMultimapNmax -1 \
-                --outSAMattributes NH HI AS nM NM MD \
-                --outSAMunmapped None \
-                {4} \
-                --runThreadN {5}".format(
-                    self.cfg.get('commands','star'), 
-                    align_path + "/", 
-                    genome_path, 
-                    self.bam,
-                    star_cmd_params,
-                    num_threads,
-                    self.cfg.get('commands', 'samtools')
-                )
             clean_up_files.extend([
                 "{}/Log.progress.out".format(align_path),
                 "{}/SJ.out.tab".format(align_path),
@@ -264,8 +183,8 @@ class Pipeline(object):
 
 
         sam_to_bam_cmd = "{0} sort -o {2} {1} && {0} index {2}".format(
-            self.cfg.get('commands', 'samtools'), 
-            sam_file, 
+            self.cfg.get('commands', 'samtools'),
+            sam_file,
             bam_file
         )
 
@@ -276,8 +195,11 @@ class Pipeline(object):
         if self.interval_mode:
             interval_mode_str = " --interval_mode"
 
-        quant_cmd = "{0} -i {1} -t {2} -d {3} -o {4}{5}{6}".format(
-            os.path.join(self.module_dir, "requantify.py"),
+        quant_cmd = "easy_quant count \
+        -i {0} \
+        -t {1} \
+        -d {2} \
+        -o {3}{4}{5}".format(
             sam_file,
             self.seq_tab,
             self.bp_distance,
@@ -314,7 +236,10 @@ class Pipeline(object):
             out_shell.write("echo \"Processing done!\"\n")
 
 
-        IOMethods.execute_cmd(index_cmd)
+        IOMethods.execute_cmd(csv_to_fasta_cmd)
+
+        if not os.path.exists(fasta_file) or os.stat(fasta_file).st_size == 0:
+            IOMethods.execute_cmd(index_cmd)
 
         if not os.path.exists(sam_file) or os.stat(sam_file).st_size == 0:
             IOMethods.execute_cmd(align_cmd)
@@ -327,9 +252,6 @@ class Pipeline(object):
     
         if not self.keep_all:
             IOMethods.execute_cmd(clean_cmd)
-
-
-
 
         logging.info("Processing complete for {}".format(self.working_dir))
 
