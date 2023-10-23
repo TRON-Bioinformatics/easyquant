@@ -9,23 +9,26 @@ import subprocess
 import sys
 
 import easy_quant.io_methods as IOMethods
+from easy_quant.version import version
 
 
-def get_read_count(infile, tool, format="fq"):
+def get_read_count(infile, format="fq"):
     if format == "fq":
         return __get_read_count_fq(infile)
     elif format == "bam":
-        return __get_read_count_bam(infile, tool)
+        return __get_read_count_bam(infile)
 
+    
 def __get_read_count_fq(fq_file):
     """Parses input FASTQ to get read count"""
     ps = subprocess.Popen(("zcat", fq_file), stdout=subprocess.PIPE)
     result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
     return int(result) / 2
 
-def __get_read_count_bam(bam_file, tool):
+
+def __get_read_count_bam(bam_file):
     """Parses input BAM to get read count"""
-    result = subprocess.check_output([tool, "view", "-c", bam_file])
+    result = subprocess.check_output(["samtools", "view", "-c", bam_file])
     return int(result)
 
 
@@ -47,15 +50,6 @@ class Pipeline(object):
             ]
         )
 
-
-        cfg_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini")
-        if not os.path.exists(cfg_file):
-            logging.error("Config file does not exist! Please move and update your config file")
-            logging.error("mv config.ini.sample config.ini -> edit")
-            sys.exit(1)
-
-        self.cfg = ConfigParser()
-        self.cfg.read(cfg_file)
         self.fq1 = None
         self.fq2 = None
         self.bam = None
@@ -73,15 +67,15 @@ class Pipeline(object):
         self.keep_bam = keep_bam
         self.keep_all = keep_all
 
-    def run(self, method, num_threads, star_cmd_params):
+        
+    def run(self, method, num_threads, align_cmd_params):
         """This function runs the pipeline on paired-end FASTQ files."""
-
 
         script_call = "python {} {}".format(os.path.realpath(__file__), " ".join(sys.argv[1:]))
         
         with open(os.path.join(self.working_dir, "run_command.sh"), "w") as outf:
             outf.write("#!/bin/sh\n\n")
-            outf.write("version=\"{}\"\n".format(self.cfg.get("general", "version")))
+            outf.write("version=\"{}\"\n".format(version))
             outf.write("python {} \\\n".format(os.path.realpath(__file__)))
             if self.fq1 and self.fq2:
                 outf.write("-1 {} \\\n".format(self.fq1))
@@ -97,18 +91,23 @@ class Pipeline(object):
                 outf.write("--interval_mode \\\n")
             if self.allow_mismatches:
                 outf.write("--allow_mismatches \\\n")
-            if star_cmd_params:
-                outf.write(star_cmd_params)
+            if align_cmd_params:
+                outf.write(align_cmd_params)
 
 
-        logging.info("Executing easyquant {}".format(self.cfg.get("general", "version")))
+        logging.info("Executing easyquant {}".format(version))
         if self.fq1 and self.fq2:
             logging.info("FQ1={}".format(self.fq1))
             logging.info("FQ2={}".format(self.fq2))
         elif self.bam:
             logging.info("BAM={}".format(self.bam))
 
-        genome_path = os.path.join(self.working_dir, "index")
+        genome_path = None
+        if method == "bwa":
+            genome_path = os.path.join(self.working_dir, "context.fa")
+        else:
+            genome_path = os.path.join(self.working_dir, "index")
+            IOMethods.create_folder(genome_path)
         align_path = os.path.join(self.working_dir, "alignment")
 
         fasta_file = os.path.join(self.working_dir, "context.fa")
@@ -127,16 +126,15 @@ class Pipeline(object):
             clean_up_files.append("{}.bai".format(bam_file))
         
         #create folders
-        IOMethods.create_folder(genome_path)
         IOMethods.create_folder(align_path)
 
 
         if not os.path.exists(num_reads_file) or os.stat(num_reads_file).st_size == 0:
             with open(num_reads_file, "w") as outf:
                 if self.fq1:
-                    outf.write(str(int(get_read_count(self.fq1, None, "fq"))))
+                    outf.write(str(int(get_read_count(self.fq1, "fq"))))
                 elif self.bam:
-                    outf.write(str(int(get_read_count(self.bam, self.cfg.get('commands', 'samtools'), "bam"))))
+                    outf.write(str(int(get_read_count(self.bam, "bam"))))
 
         csv_to_fasta_cmd = "easy_quant csv2fasta \
         --input_csv {} \
@@ -155,14 +153,37 @@ class Pipeline(object):
             num_threads,
             method
         )
-        align_cmd = "easy_quant align --fq1 {} --fq2 {} --index_dir {} --output_path {} -t {} -m {}".format(
-            self.fq1,
-            self.fq2,
-            genome_path,
-            sam_file,
-            num_threads,
-            method
-        )
+        
+        align_cmd = ""
+        if self.fq1 and self.fq2:
+            align_cmd = "easy_quant align \
+            --fq1 {} \
+            --fq2 {} \
+            --index_dir {} \
+            --output_path {} \
+            -t {} \
+            -m {}".format(
+                self.fq1,
+                self.fq2,
+                genome_path,
+                align_path,
+                num_threads,
+                method
+            )
+        elif self.bam:
+            align_cmd = "easy_quant align \
+            --bam {} \
+            --index_dir {} \
+            --output_path {} \
+            -t {} \
+            -m {}".format(
+                self.bam,
+                genome_path,
+                align_path,
+                num_threads,
+                method
+            )
+            
 
         if method == "bwa":
             # Add index files from bwa
@@ -182,8 +203,7 @@ class Pipeline(object):
             ])
 
 
-        sam_to_bam_cmd = "{0} sort -o {2} {1} && {0} index {2}".format(
-            self.cfg.get('commands', 'samtools'),
+        sam_to_bam_cmd = "samtools sort -o {1} {0} && samtools index {1}".format(
             sam_file,
             bam_file
         )
@@ -237,9 +257,7 @@ class Pipeline(object):
 
 
         IOMethods.execute_cmd(csv_to_fasta_cmd)
-
-        if not os.path.exists(fasta_file) or os.stat(fasta_file).st_size == 0:
-            IOMethods.execute_cmd(index_cmd)
+        IOMethods.execute_cmd(index_cmd)
 
         if not os.path.exists(sam_file) or os.stat(sam_file).st_size == 0:
             IOMethods.execute_cmd(align_cmd)

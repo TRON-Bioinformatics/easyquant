@@ -32,6 +32,8 @@ classifiers = [
 dynamic = ["dependencies"]
 
 [tool.setuptools]
+packages = ["easy_quant"]
+package-dir = {"" = "src"}
 py-modules = []
 
 [tool.setuptools.dynamic]

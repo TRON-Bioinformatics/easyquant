@@ -4,27 +4,27 @@
 import subprocess
 
 
-def get_align_cmd_bowtie2(fq1, fq2, index_dir, out_sam, num_threads):
-    cmd = "bowtie2 -p {0} -x {1}/bowtie -1 {2} -2 {3} -S {4}".format(
+def get_align_cmd_bowtie2(fq1, fq2, index_dir, out_dir, num_threads):
+    cmd = "bowtie2 -p {0} -x {1}/bowtie -1 {2} -2 {3} -S {4}/Aligned.out.sam".format(
         num_threads,
         index_dir,
         fq1,
         fq2,
-        out_sam
+        out_dir
     )
 
     return cmd
 
     
-def get_align_cmd_bwa(fq1, fq2, index_dir, out_sam, num_threads):
-    cmd = "bwa mem -t {0} {1} {2} {3} > {4}".format(
+def get_align_cmd_bwa(fq1, fq2, fasta_in, out_dir, num_threads):
+    # bwa mem [options] <idxbase> <in1.fq> [in2.fq]
+    cmd = "bwa mem -t {0} {1} {2} {3} > {4}/Aligned.out.sam".format(
         num_threads,
-        index_dir, 
-        fq1, 
-        fq2, 
-        out_sam
+        fasta_in,
+        fq1,
+        fq2,
+        out_dir
     )
-
     return cmd
 
 
@@ -45,7 +45,7 @@ def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_pa
         --outFilterMatchNminOverLread 0.3 \
         {4} \
         --runThreadN {5}".format(
-            out_dir,
+            out_dir + "/",
             index_dir,
             fq1,
             fq2,
@@ -68,24 +68,25 @@ def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_pa
         --outSAMunmapped None \
         {3} \
         --runThreadN {4}".format(
-            out_dir,
+            out_dir + "/",
             index_dir,
             bam,
             custom_params,
             num_threads
         )
-
     return cmd
 
 
 def run(fq1, fq2, bam, index_dir, out_path, threads, method, params):
+    cmd = None
     if method == "bowtie2":
-        subprocess.run(get_align_cmd_bowtie2(fq1, fq2, index_dir, out_path, threads).split(" "))
+        cmd = get_align_cmd_bowtie2(fq1, fq2, index_dir, out_path, threads)
     elif method == "bwa":
-        subprocess.run(get_align_cmd_bwa(fq1, fq2, index_dir, out_path, threads).split(" "))
+        cmd = get_align_cmd_bwa(fq1, fq2, index_dir, out_path, threads)
     elif method == "star":
-        subprocess.run(get_align_cmd_star(fq1, fq2, bam, index_dir, out_path, threads, params).split(" "))
-
+        cmd = get_align_cmd_star(fq1, fq2, bam, index_dir, out_path, threads, params)
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd=out_path)
 
 def add_aligner_args(parser):
     parser.add_argument(
@@ -139,7 +140,8 @@ def add_aligner_args(parser):
         "-p",
         "--params",
         dest="params",
-        help="Specify custom params (e.g. for STAR)"
+        help="Specify custom params (e.g. for STAR)",
+        default=""
     )
     parser.set_defaults(func=alignment_command)
 

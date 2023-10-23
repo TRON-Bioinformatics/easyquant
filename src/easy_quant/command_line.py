@@ -1,12 +1,10 @@
 import argparse
-
+import easy_quant
 from easy_quant.csv_to_fasta import add_csv_to_fasta_args
 from easy_quant.indexing import add_indexing_args
 from easy_quant.aligning import add_aligner_args
 from easy_quant.requantify import add_requantify_args
 from easy_quant.plot_reads import add_plot_reads_args
-
-import easy_quant
 from easy_quant.pipeline import add_pipeline_args
 from easy_quant.version import version
 
