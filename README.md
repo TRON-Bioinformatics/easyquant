@@ -13,10 +13,11 @@ breakpoint (spanning pairs).
 - Input:
     - Table with target sequences and breakpoints position (CSV/TSV format)
     - fastq files / BAM file (BAM input only works in combination with STAR as aligner)
+- Convert target sequences to FASTA format (`easy_quant csv2fasta`)
 - Map reads against sequences using STAR/Bowtie2/BWA
-    - Generate Index of sequences as reference
-    - Map reads
-- Count reads using `requantify.py`
+    - Generate Index of sequences as reference (`easy_quant index`)
+    - Map reads (`easy_quant align`)
+- Count reads using `easy_quant count`
 - Output: 
     - Table with read counts per input sequence
 
