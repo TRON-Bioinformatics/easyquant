@@ -22,8 +22,8 @@ breakpoint (spanning pairs).
 
 ## Dependencies
 
- - Python 3
-   - pysam (>= 0.16.0.1)
+ - Python (>= 3.7)
+   - pysam (>= 0.19.1)
  - STAR (>= 2.7.8a)
  - samtools (>= 1.9)
  - bowtie2 (>= 2.4.4)
@@ -34,12 +34,11 @@ breakpoint (spanning pairs).
 ```
 git clone https://github.com/TRON-Bioinformatics/easyquant.git
 
-mv config.ini.sample config.ini
-
 # If you have conda installed you can simply install the environment like this
 conda env create -f environment.yml
 
-# Otherwise you have to adjust the path to the different tools in your config.ini
+pip install .
+
 ```
 
 
@@ -47,37 +46,46 @@ conda env create -f environment.yml
 
 
 ```
-usage: easy_quant.py [-h] [-1 FQ1] [-2 FQ2] [-b BAM] -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
-                     [--interval_mode] [-m {star,bowtie2,bwa}] [-t NUM_THREADS] [--star_cmd_params STAR_CMD_PARAMS]
+usage: easy_quant pipeline [-h] [-1 FQ1] [-2 FQ2] [-b BAM] -s SEQ_TAB -o
+                           OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
+                           [--interval_mode] [-m {star,bowtie2,bwa}]
+                           [-t NUM_THREADS]
+                           [--star_cmd_params STAR_CMD_PARAMS]
+                           [--keep_bam | --keep_all]
 
-Processing of demultiplexed FASTQs
+Runs the complete EasyQuant pipeline
 
 optional arguments:
   -h, --help            show this help message and exit
   -1 FQ1, --fq1 FQ1     Specify path to Read 1 (R1) FASTQ file
   -2 FQ2, --fq2 FQ2     Specify path to Read 2 (R2) FASTQ file
   -b BAM, --bam_file BAM
-                        Specify path to input BAM file as alternative to FASTQ input
+                        Specify path to input BAM file as alternative to FASTQ
+                        input
   -s SEQ_TAB, --sequence_tab SEQ_TAB
-                        Specify the reference sequences as table with colums name, sequence, and position
-  -o OUTPUT_FOLDER, --output-folder OUTPUT_FOLDER
+                        Specify the reference sequences as table with colums
+                        name, sequence, and position
+  -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         Specify the folder to save the results into.
   -d BP_DISTANCE, --bp_distance BP_DISTANCE
-                        Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for
+                        Threshold in base pairs for the required overlap size
+                        of reads on both sides of the breakpoint for
                         junction/spanning read counting
-  --allow_mismatches    Allow mismatches within the region around the breakpoint determined by the bp_distance parameter
+  --allow_mismatches    Allow mismatches within the region around the
+                        breakpoint determined by the bp_distance parameter
   --interval_mode       Specify if interval mode shall be used
   -m {star,bowtie2,bwa}, --method {star,bowtie2,bwa}
                         Specify alignment software to generate the index
   -t NUM_THREADS, --threads NUM_THREADS
                         Specify number of threads to use for the alignment
   --star_cmd_params STAR_CMD_PARAMS
-                        Specify STAR commandline parameters to use for the alignment
-  --keep_bam
-                        Do not delete alignment in BAM format during clean up step
-  --keep_all
-                        Do not perform clean up step after re-quantification
+                        Specify STAR commandline parameters to use for the
+                        alignment
+  --keep_bam            Do not delete alignment in BAM format during clean up
+                        step
+  --keep_all            Do not perform clean up step after re-quantification
 
+Copyright (c) 2023 TRON gGmbH (See LICENSE for licensing details)
 ```
 
 ### Use case with example data
@@ -88,7 +96,7 @@ with input sequences and positions, as well as two fastq files / one BAM file.
 Fastqs as input:
 
 ```
-python easy_quant.py \
+easy_quant pipeline \
   -1 example_data/example_rna-seq_R1_001.fastq.gz \
   -2 example_data/example_rna-seq_R1_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
@@ -102,7 +110,7 @@ python easy_quant.py \
 BAM as input:
 
 ```
-python easy_quant.py \
+easy_quant pipeline \
   -b example_data/example_rna-seq.bam \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
