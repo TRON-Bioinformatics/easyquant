@@ -182,11 +182,20 @@ class Quantification(object):
         logger.info("Starting quantification.".format(self.bam_file))
         bam = pysam.AlignmentFile(self.bam_file, "rb")
 
+        missing_refs = {}
         r1 = None
         r2 = None
 
         for read in bam.fetch():
 
+            if read.flag > 255:
+                continue
+            # Handle missing reference sequences which occur in SAM/BAM
+            # but not in seq_table.csv
+            if read.reference_name and read.reference_name not in self.seq_to_pos:
+                if read.reference_name not in missing_refs:
+                    missing_refs[read.reference_name] = 0
+                missing_refs[read.reference_name] += 1
             if not r1:
                 r1 = read
             elif r1 and not r2:
@@ -220,6 +229,10 @@ class Quantification(object):
                     self.counts[seq_name][interval_name][4] = cov_mean
                     self.counts[seq_name][interval_name][5] = cov_median
 
+        for seq, count in missing_refs.items():
+            #logger.warning("Could not find {} in reference sequence table: {} reads".format(seq, count))
+            pass
+
 
     def quantify(self, r1, r2):
 
@@ -237,14 +250,11 @@ class Quantification(object):
           2 within_interval reads that map completely within the interval or softjunctions
         """
 
-
-#        if r1.is_unmapped or r2.is_unmapped:
-#            print(r1)
-#            print(r2)
-#            print(r1.reference_start, r1.reference_end, r1.reference_name, r2.reference_start, r2.reference_end, r2.reference_name)
-        
         read_name = r1.query_name
         seq_name = r1.reference_name
+        
+        if seq_name not in self.seq_to_pos:
+            return
 
         left_interval = None
         right_interval = None
@@ -280,11 +290,11 @@ class Quantification(object):
                 logger.error("Not possible to get read information. Skipping...")
                 return
 
+
+
         # Get read information [junc, within, interval]
         r1_info = classify_read(r1_start, r1_stop, r1_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
         r2_info = classify_read(r2_start, r2_stop, r2_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
-
-#        print(r1_info, r2_info)
         
         if not self.interval_mode:
             self.counts[seq_name][2] = max([r1_info["anchor"], r2_info["anchor"], self.counts[seq_name][2]])
@@ -479,6 +489,4 @@ def add_requantify_args(parser):
 
 def requantify_command(args):
     """Run requantification from command line"""
-    # seq_table_file, bam_file, output_path, bp_dist, allow_mismatches, interval_mode
     requant = Quantification(args.seq_table_file, args.input_bam, args.output_path, args.bp_distance, args.allow_mismatches, args.interval_mode)
-    requant.run()

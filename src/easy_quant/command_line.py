@@ -21,7 +21,9 @@ def easy_quant_cli():
     subparsers = parser.add_subparsers(description="Commands")
 
     pipeline_parser = subparsers.add_parser(
-        "pipeline", description="Runs the complete EasyQuant pipeline", epilog=epilog
+        "pipeline",
+        description="Runs the complete EasyQuant pipeline",
+        epilog=epilog
     )
     add_pipeline_args(pipeline_parser)
 
