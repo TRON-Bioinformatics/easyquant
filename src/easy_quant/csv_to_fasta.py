@@ -19,7 +19,8 @@ def csv_to_fasta(csv_in, fasta_out):
 
             name = row["name"]
             sequence = row["sequence"]
-
+            # TODO: Make use of write_lines for increased performance
+            # in larger reference files
             outf.write(">{}\n".format(name))
             for i in range(0, len(sequence), 60):
                 outf.write("{}\n".format(sequence[i:i+60]))
