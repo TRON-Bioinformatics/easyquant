@@ -7,8 +7,8 @@ csv.field_size_limit(sys.maxsize)
 
 def csv_to_fasta(csv_in, fasta_out):
     """This function converts the target sequences TSV/CSV file to the FASTA format."""
-    outf = open(fasta_out, "w")
-    with open(csv_in, "r", newline="\n") as csvfile:
+    with open(fasta_out, "w") as outf, \
+         open(csv_in, "r", newline="\n") as csvfile:
         # Auto detect dialect of input file
         dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
         csvfile.seek(0)
@@ -24,8 +24,6 @@ def csv_to_fasta(csv_in, fasta_out):
             outf.write(">{}\n".format(name))
             for i in range(0, len(sequence), 60):
                 outf.write("{}\n".format(sequence[i:i+60]))
-
-    outf.close()
 
     
 def add_csv_to_fasta_args(parser):
