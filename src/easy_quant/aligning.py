@@ -144,4 +144,13 @@ def add_aligner_args(parser):
 
 
 def alignment_command(args):
-    run(args.fq1, args.fq2, args.bam, args.index_dir, args.output_path, args.threads, args.method, args.params)
+    run(
+        fq1=args.fq1,
+        fq2=args.fq2,
+        bam=args.bam,
+        index_dir=args.index_dir,
+        out_path=args.output_path,
+        threads=args.threads,
+        method=args.method,
+        params=args.params
+    )

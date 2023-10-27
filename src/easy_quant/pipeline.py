@@ -365,5 +365,16 @@ def add_pipeline_args(parser):
 
 
 def pipeline_command(args):
-    pipe = Pipeline(args.fq1, args.fq2, args.bam, args.seq_tab, args.bp_distance, args.output_folder, args.allow_mismatches, args.interval_mode, args.keep_alignment, args.keep_all)
+    pipe = Pipeline(
+        fq1=args.fq1,
+        fq2=args.fq2,
+        bam=args.bam,
+        seq_tab=args.seq_tab,
+        bp_distance=args.bp_distance,
+        working_dir=args.output_folder,
+        allow_mismatches=args.allow_mismatches,
+        interval_mode=args.interval_mode,
+        keep_bam=args.keep_alignment,
+        keep_all=args.keep_all
+    )
     pipe.run(args.method, args.num_threads, args.star_cmd_params)

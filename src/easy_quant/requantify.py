@@ -290,8 +290,22 @@ class Quantification(object):
 
 
         # Get read information [junc, within, interval]
-        r1_info = classify_read(r1_start, r1_stop, r1_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
-        r2_info = classify_read(r2_start, r2_stop, r2_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
+        r1_info = classify_read(
+            aln_start=r1_start,
+            aln_stop=r1_stop,
+            aln_pairs=r1_pairs,
+            intervals=self.seq_to_pos[seq_name],
+            allow_mismatches=self.allow_mismatches,
+            bp_dist=self.bp_dist
+        )
+        r2_info = classify_read(
+            aln_start=r2_start,
+            aln_stop=r2_stop,
+            aln_pairs=r2_pairs,
+            intervals=self.seq_to_pos[seq_name],
+            allow_mismatches=self.allow_mismatches,
+            bp_dist=self.bp_dist
+        )
         
         if not self.interval_mode:
             self.counts[seq_name][2] = max([r1_info["anchor"], r2_info["anchor"], self.counts[seq_name][2]])
@@ -486,4 +500,11 @@ def add_requantify_args(parser):
 
 def requantify_command(args):
     """Run requantification from command line"""
-    requant = Quantification(args.seq_table_file, args.input_bam, args.output_path, args.bp_distance, args.allow_mismatches, args.interval_mode)
+    requant = Quantification(
+        seq_table_file=args.seq_table_file,
+        bam_file=args.input_bam,
+        output_path=args.output_path,
+        bp_dist=args.bp_distance,
+        allow_mismatches=args.allow_mismatches,
+        interval_mode=args.interval_mode
+    )
