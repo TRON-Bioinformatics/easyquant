@@ -19,7 +19,6 @@ def csv_to_fasta(csv_in, fasta_out):
 
             name = row["name"]
             sequence = row["sequence"]
-            position = row["position"]
 
             outf.write(">{}\n".format(name))
             for i in range(0, len(sequence), 60):
