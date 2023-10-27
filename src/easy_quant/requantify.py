@@ -230,8 +230,7 @@ class Quantification(object):
                     self.counts[seq_name][interval_name][5] = cov_median
 
         for seq, count in missing_refs.items():
-            #logger.warning("Could not find {} in reference sequence table: {} reads".format(seq, count))
-            pass
+            logger.warning("Could not find {} in reference sequence table: {} reads".format(seq, count))
 
 
     def quantify(self, r1, r2):
