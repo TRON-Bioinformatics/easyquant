@@ -3,27 +3,32 @@ import logging
 import os
 import sys
 
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 csv.field_size_limit(sys.maxsize)
 
 def csv_to_fasta(csv_in, fasta_out):
     """This function converts the target sequences TSV/CSV file to the FASTA format."""
-    with open(fasta_out, "w") as outf, \
+    with open(fasta_out, "w") as fasta_handle, \
          open(csv_in, "r", newline="\n") as csvfile:
         # Auto detect dialect of input file
         dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
         csvfile.seek(0)
         reader = csv.DictReader(csvfile, dialect=dialect)
 
+        sequences = []
         # Iterate over input file rows
         for row in reader:
-
-            name = row["name"]
-            sequence = row["sequence"]
-            # TODO: Make use of write_lines for increased performance
-            # in larger reference files
-            outf.write(">{}\n".format(name))
-            for i in range(0, len(sequence), 60):
-                outf.write("{}\n".format(sequence[i:i+60]))
+            record = SeqRecord(
+                Seq(row["sequence"]),
+                id=row["name"],
+                name=row["name"],
+                description=row["position"],
+            )
+            sequences.append(record)
+        SeqIO.write(sequences, fasta_handle, "fasta")
 
     
 def add_csv_to_fasta_args(parser):

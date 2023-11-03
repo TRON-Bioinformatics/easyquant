@@ -23,12 +23,8 @@ breakpoint (spanning pairs).
 
 ## Dependencies
 
- - Python (3.7)
-   - pysam (0.19.1)
- - STAR (2.7.8a)
- - samtools (1.9)
- - bowtie2 (2.4.4)
- - bwa (0.7.17)
+Please see `environment.yml` and `requirements.txt` for all dependencies
+
  
 ## Installation
 

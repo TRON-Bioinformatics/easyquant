@@ -1,18 +1,16 @@
 import math
 import subprocess
 
-
+from Bio import SeqIO
 
 def get_sequence_count_and_len(fasta_file):
     """Returns the number of sequences and the total bases from a fasta file"""
     seq_num = 0
     total_bases = 0
-    with open(fasta_file) as fasta:
-        for line in fasta:
-            if line[0] == ">":
-                seq_num += 1
-            else:
-                total_bases += len(line.rstrip())
+    with open(fasta_file) as fasta_handle:
+        for record in SeqIO.parse(fasta_handle, "fasta"):
+            seq_num += 1
+            total_bases += len(record.seq)
     return seq_num, total_bases
 
 

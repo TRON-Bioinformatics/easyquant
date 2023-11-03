@@ -5,7 +5,7 @@ import unittest
 
 SEQ_TABLE_FILE = os.path.join("example_data", "CLDN18_Context_seq.csv")
 
-from easy_quant.requantify import perc_true, mean, median, get_seq_to_pos, classify_read
+from easy_quant.requantify import perc_true, get_seq_to_pos, classify_read
 
 
 class TestRequantify(unittest.TestCase):
@@ -13,16 +13,6 @@ class TestRequantify(unittest.TestCase):
     def test_perc_true(self):
         data = [4, 3, 0, 5, 9, 0, 1, 0, 0, 0]
         self.assertEqual(perc_true(data), 0.5)
-
-        
-    def test_mean(self):
-        data = [4, 3, 0, 5, 9, 0, 1, 0, 0, 0]
-        self.assertEqual(mean(data), 2.2)
-
-        
-    def test_median(self):
-        data = [4, 3, 0, 5, 9, 0, 1, 0, 0, 0]
-        self.assertEqual(median(data), 0.5)
 
         
     def test_get_seq_to_pos(self):

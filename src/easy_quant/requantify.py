@@ -4,6 +4,7 @@ import gzip
 import logging
 import os
 import pysam
+from statistics import mean, median
 import sys
 
 csv.field_size_limit(sys.maxsize)
@@ -18,17 +19,6 @@ def perc_true(lst):
     n = len(lst)
     num_true = sum(1 for val in lst if val > 0)
     return float(num_true)/n
-
-
-def mean(lst):
-    n = len(lst)
-    return float(sum(lst))/n
-
-
-def median(lst):
-    n = len(lst)
-    s = sorted(lst)
-    return (s[n//2-1]/2.0+s[n//2]/2.0, float(s[n//2]))[n % 2] if n else None
 
 
 def get_seq_to_pos(seq_table_file):
