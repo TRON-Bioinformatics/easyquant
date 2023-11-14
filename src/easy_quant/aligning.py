@@ -62,7 +62,9 @@ def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_pa
         --alignEndsType EndToEnd \
         --outFilterMultimapNmax -1 \
         --outSAMattributes NH HI AS nM NM MD \
-        --outSAMunmapped None \
+        --outSAMunmapped Within KeepPairs \
+        --outFilterScoreMinOverLread 0.3 \
+        --outFilterMatchNminOverLread 0.3 \
         {3} \
         --runThreadN {4}".format(
             out_dir + "/",
