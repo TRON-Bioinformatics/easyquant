@@ -31,8 +31,11 @@ Please see `environment.yml` and `requirements.txt` for all dependencies
 ```
 git clone https://github.com/TRON-Bioinformatics/easyquant.git
 
+cd easyquant
+
 # If you have conda installed you can simply install the environment like this
-conda env create -f environment.yml
+conda env create -f environment.yml --prefix conda_env/
+conda activate conda_env/
 
 pip install .
 
