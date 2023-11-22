@@ -8,7 +8,7 @@
 rm -rf example_out_csv
 
 # Run pipeline
-python easy_quant.py \
+easy_quant pipeline \
   -1 example_data/example_rna-seq_R1_001.fastq.gz \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
@@ -25,7 +25,7 @@ python easy_quant.py \
 rm -rf example_out_tab
 
 # Run pipeline
-python easy_quant.py \
+easy_quant pipeline \
   -1 example_data/example_rna-seq_R1_001.fastq.gz \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.tsv \
@@ -40,7 +40,7 @@ python easy_quant.py \
 rm -rf example_out_csv_bowtie2
 
 # Run pipeline
-python easy_quant.py \
+easy_quant pipeline \
   -1 example_data/example_rna-seq_R1_001.fastq.gz \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.tsv \
@@ -51,7 +51,7 @@ python easy_quant.py \
 rm -rf example_out_csv_bwa
 
 # Run pipeline
-python easy_quant.py \
+easy_quant pipeline \
   -1 example_data/example_rna-seq_R1_001.fastq.gz \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.tsv \
@@ -66,7 +66,7 @@ python easy_quant.py \
 rm -rf example_out_csv_interval
 
 # Run pipeline
-python easy_quant.py \
+easy_quant pipeline \
   -1 example_data/example_rna-seq_R1_001.fastq.gz \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
@@ -82,7 +82,7 @@ python easy_quant.py \
 rm -rf example_out_csv_mismatch
 
 # Run pipeline
-python easy_quant.py \
+easy_quant pipeline \
   -1 example_data/example_rna-seq_R1_001.fastq.gz \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
@@ -98,7 +98,7 @@ python easy_quant.py \
 rm -rf example_out_csv_bam
 
 # Run pipeline
-python easy_quant.py \
+easy_quant pipeline \
   -b example_data/example_rna-seq.bam \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
@@ -114,7 +114,7 @@ python easy_quant.py \
 rm -rf example_out_keep_bam
 
 # Run pipeline
-python easy_quant.py \
+easy_quant pipeline \
   -b example_data/example_rna-seq.bam \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
@@ -130,7 +130,7 @@ python easy_quant.py \
 rm -rf example_out_keep_all
 
 # Run pipeline
-python easy_quant.py \
+easy_quant pipeline \
   -b example_data/example_rna-seq.bam \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \

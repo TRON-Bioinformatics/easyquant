@@ -1,11 +1,10 @@
-#!/usr/bin/env python
-
 from argparse import ArgumentParser
 import csv
 import gzip
 import logging
 import os
 import pysam
+from statistics import mean, median
 import sys
 
 csv.field_size_limit(sys.maxsize)
@@ -20,17 +19,6 @@ def perc_true(lst):
     n = len(lst)
     num_true = sum(1 for val in lst if val > 0)
     return float(num_true)/n
-
-
-def mean(lst):
-    n = len(lst)
-    return float(sum(lst))/n
-
-
-def median(lst):
-    n = len(lst)
-    s = sorted(lst)
-    return (s[n//2-1]/2.0+s[n//2]/2.0, float(s[n//2]))[n % 2] if n else None
 
 
 def get_seq_to_pos(seq_table_file):
@@ -182,11 +170,20 @@ class Quantification(object):
         logger.info("Starting quantification.".format(self.bam_file))
         bam = pysam.AlignmentFile(self.bam_file, "rb")
 
+        missing_refs = {}
         r1 = None
         r2 = None
 
         for read in bam.fetch():
 
+            if read.flag > 255:
+                continue
+            # Handle missing reference sequences which occur in SAM/BAM
+            # but not in seq_table.csv
+            if read.reference_name and read.reference_name not in self.seq_to_pos:
+                if read.reference_name not in missing_refs:
+                    missing_refs[read.reference_name] = 0
+                missing_refs[read.reference_name] += 1
             if not r1:
                 r1 = read
             elif r1 and not r2:
@@ -220,6 +217,9 @@ class Quantification(object):
                     self.counts[seq_name][interval_name][4] = cov_mean
                     self.counts[seq_name][interval_name][5] = cov_median
 
+        for seq, count in missing_refs.items():
+            logger.warning("Could not find {} in reference sequence table: {} reads".format(seq, count))
+
 
     def quantify(self, r1, r2):
 
@@ -237,14 +237,11 @@ class Quantification(object):
           2 within_interval reads that map completely within the interval or softjunctions
         """
 
-
-#        if r1.is_unmapped or r2.is_unmapped:
-#            print(r1)
-#            print(r2)
-#            print(r1.reference_start, r1.reference_end, r1.reference_name, r2.reference_start, r2.reference_end, r2.reference_name)
-        
         read_name = r1.query_name
         seq_name = r1.reference_name
+        
+        if seq_name not in self.seq_to_pos:
+            return
 
         left_interval = None
         right_interval = None
@@ -280,11 +277,25 @@ class Quantification(object):
                 logger.error("Not possible to get read information. Skipping...")
                 return
 
-        # Get read information [junc, within, interval]
-        r1_info = classify_read(r1_start, r1_stop, r1_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
-        r2_info = classify_read(r2_start, r2_stop, r2_pairs, self.seq_to_pos[seq_name], self.allow_mismatches, self.bp_dist)
 
-#        print(r1_info, r2_info)
+
+        # Get read information [junc, within, interval]
+        r1_info = classify_read(
+            aln_start=r1_start,
+            aln_stop=r1_stop,
+            aln_pairs=r1_pairs,
+            intervals=self.seq_to_pos[seq_name],
+            allow_mismatches=self.allow_mismatches,
+            bp_dist=self.bp_dist
+        )
+        r2_info = classify_read(
+            aln_start=r2_start,
+            aln_stop=r2_stop,
+            aln_pairs=r2_pairs,
+            intervals=self.seq_to_pos[seq_name],
+            allow_mismatches=self.allow_mismatches,
+            bp_dist=self.bp_dist
+        )
         
         if not self.interval_mode:
             self.counts[seq_name][2] = max([r1_info["anchor"], r2_info["anchor"], self.counts[seq_name][2]])
@@ -429,23 +440,61 @@ class Quantification(object):
                     out_line = "\t".join(sp_out) + "\n"
                     out_handle.write(out_line)
 
-    
-
-def main():
-    """Parse command line arguments and start script"""
-    parser = ArgumentParser(description="Generate mapping stats for fusion detection")
-    parser.add_argument('-i', '--input_bam', dest='input_bam', help='Input BAM file', required=True)
-    parser.add_argument('-t', '--seq_table', dest='seq_table_file', help='Path to input sequence table', required=True)
-    parser.add_argument('-o', '--output_path', dest='output_path', help='Output path where results are stored', default="test_out")
-    parser.add_argument('-d', '--bp_distance', dest='bp_distance', type=int, default=10,
-                        help='Distance around postion of interest for junction read counts.')
-    parser.add_argument('--allow_mismatches', dest='allow_mismatches', action='store_true', help='Allow mismatches within the region around the breakpoint determined by the bp_distance parameter')
-    parser.add_argument('--interval_mode', dest='interval_mode', action='store_true', help='Specify if interval mode shall be used')
-    args = parser.parse_args()
 
 
-    q = Quantification(args.seq_table_file, args.input_bam, args.output_path, args.bp_distance, args.allow_mismatches, args.interval_mode)
-    
+def add_requantify_args(parser):
+    """Add arguments for requantification to a parser"""
+    parser.add_argument(
+        "-i",
+        "--input_bam",
+        dest="input_bam",
+        help="Input BAM file",
+        required=True
+    )
+    parser.add_argument(
+        "-t",
+        "--seq_table",
+        dest="seq_table_file",
+        help="Path to input sequence table",
+        required=True
+    )
+    parser.add_argument(
+        "-o",
+        "--output_path",
+        dest="output_path",
+        help="Output path where results are stored",
+        default="test_out"
+    )
+    parser.add_argument(
+        "-d",
+        "--bp_distance",
+        dest="bp_distance",
+        type=int,
+        default=10,
+        help="Distance around postion of interest for junction read counts."
+    )
+    parser.add_argument(
+        "--allow_mismatches",
+        dest="allow_mismatches",
+        action="store_true",
+        help="Allow mismatches within the region around the breakpoint determined by the bp_distance parameter"
+    )
+    parser.add_argument(
+        "--interval_mode",
+        dest="interval_mode",
+        action="store_true",
+        help="Specify if interval mode shall be used"
+    )
+    parser.set_defaults(func=requantify_command)
 
-if __name__ == "__main__":
-    main()
+
+def requantify_command(args):
+    """Run requantification from command line"""
+    requant = Quantification(
+        seq_table_file=args.seq_table_file,
+        bam_file=args.input_bam,
+        output_path=args.output_path,
+        bp_dist=args.bp_distance,
+        allow_mismatches=args.allow_mismatches,
+        interval_mode=args.interval_mode
+    )
