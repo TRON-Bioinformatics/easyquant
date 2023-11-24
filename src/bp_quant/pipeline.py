@@ -3,8 +3,8 @@ import os
 import subprocess
 import sys
 
-import easy_quant.io_methods as IOMethods
-from easy_quant.version import version
+import bp_quant.io_methods as IOMethods
+from bp_quant.version import version
 
 
 def get_read_count(infile, format="fq"):
@@ -90,7 +90,7 @@ class Pipeline(object):
                 outf.write(align_cmd_params)
 
 
-        logging.info("Executing easyquant {}".format(version))
+        logging.info("Executing bpquant {}".format(version))
         if self.fq1 and self.fq2:
             logging.info("FQ1={}".format(self.fq1))
             logging.info("FQ2={}".format(self.fq2))
@@ -131,14 +131,14 @@ class Pipeline(object):
                 elif self.bam:
                     outf.write(str(int(get_read_count(self.bam, "bam"))))
 
-        csv_to_fasta_cmd = "easy_quant csv2fasta \
+        csv_to_fasta_cmd = "bp_quant csv2fasta \
         --input_csv {} \
         --output_fasta {}".format(
             self.seq_tab,
             fasta_file
         )
 
-        index_cmd = "easy_quant index \
+        index_cmd = "bp_quant index \
         --input_fasta {} \
         --index_dir {} \
         -t {} \
@@ -151,7 +151,7 @@ class Pipeline(object):
         
         align_cmd = ""
         if self.fq1 and self.fq2:
-            align_cmd = "easy_quant align \
+            align_cmd = "bp_quant align \
             --fq1 {} \
             --fq2 {} \
             --index_dir {} \
@@ -166,7 +166,7 @@ class Pipeline(object):
                 method
             )
         elif self.bam:
-            align_cmd = "easy_quant align \
+            align_cmd = "bp_quant align \
             --bam {} \
             --index_dir {} \
             --output_path {} \
@@ -210,7 +210,7 @@ class Pipeline(object):
         if self.interval_mode:
             interval_mode_str = " --interval_mode"
 
-        quant_cmd = "easy_quant count \
+        quant_cmd = "bp_quant count \
         -i {0} \
         -t {1} \
         -d {2} \

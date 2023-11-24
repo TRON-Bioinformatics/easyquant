@@ -1,19 +1,19 @@
 import argparse
-import easy_quant
-from easy_quant.csv_to_fasta import add_csv_to_fasta_args
-from easy_quant.indexing import add_indexing_args
-from easy_quant.aligning import add_aligner_args
-from easy_quant.requantify import add_requantify_args
-from easy_quant.plot_reads import add_plot_reads_args
-from easy_quant.pipeline import add_pipeline_args
-from easy_quant.version import version
+import bp_quant
+from bp_quant.csv_to_fasta import add_csv_to_fasta_args
+from bp_quant.indexing import add_indexing_args
+from bp_quant.aligning import add_aligner_args
+from bp_quant.requantify import add_requantify_args
+from bp_quant.plot_reads import add_plot_reads_args
+from bp_quant.pipeline import add_pipeline_args
+from bp_quant.version import version
 
 epilog = "Copyright (c) 2023 TRON gGmbH (See LICENSE for licensing details)"
 
 
-def easy_quant_cli():
+def bp_quant_cli():
     parser = argparse.ArgumentParser(
-        description="EasyQuant version {}".format(version),
+        description="bpquant version {}".format(version),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         epilog=epilog,
     )
@@ -22,7 +22,7 @@ def easy_quant_cli():
 
     pipeline_parser = subparsers.add_parser(
         "pipeline",
-        description="Runs the complete EasyQuant pipeline",
+        description="Runs the complete bpquant pipeline",
         epilog=epilog
     )
     add_pipeline_args(pipeline_parser)

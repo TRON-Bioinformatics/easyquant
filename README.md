@@ -1,4 +1,4 @@
-# easyquant
+# bp-quant
 
 *Quantification of reads at defined positions to verify custom input sequences.*
 
@@ -13,20 +13,27 @@ breakpoint (spanning pairs).
 - Input:
     - Table with target sequences and breakpoints position (CSV/TSV format)
     - fastq files / BAM file (BAM input only works in combination with STAR as aligner)
-- Convert target sequences to FASTA format (`easy_quant csv2fasta`)
+- Convert target sequences to FASTA format (`bp_quant csv2fasta`)
 - Map reads against sequences using STAR/Bowtie2/BWA
-    - Generate Index of sequences as reference (`easy_quant index`)
-    - Map reads (`easy_quant align`)
-- Count reads using `easy_quant count`
+    - Generate Index of sequences as reference (`bp_quant index`)
+    - Map reads (`bp_quant align`)
+- Count reads using `bp_quant count`
 - Output: 
     - Table with read counts per input sequence
 
 ## Dependencies
 
-Please see `environment.yml` and `requirements.txt` for all dependencies
+Look at this [environment.yml](https://github.com/TRON-Bioinformatics/easyquant/blob/master/environment.yml) for the individual dependencies (Hint: File can also be used to build conda environment).
 
  
 ## Installation
+
+```
+# Create conda environment from above or add the dependencies to your path
+pip install bp-quant
+```
+
+Alternatively, bp-quant can be installed from [github repository](https://github.com/TRON-Bioinformatics/easyquant.git):
 
 ```
 git clone https://github.com/TRON-Bioinformatics/easyquant.git
@@ -38,15 +45,12 @@ conda env create -f environment.yml --prefix conda_env/
 conda activate conda_env/
 
 pip install .
-
 ```
-
 
 ## Usage
 
-
 ```
-usage: easy_quant pipeline [-h] [-1 FQ1] [-2 FQ2] [-b BAM] -s SEQ_TAB -o
+usage: bp_quant pipeline [-h] [-1 FQ1] [-2 FQ2] [-b BAM] -s SEQ_TAB -o
                            OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
                            [--interval_mode] [-m {star,bowtie2,bwa}]
                            [-t NUM_THREADS]
@@ -96,7 +100,7 @@ with input sequences and positions, as well as two fastq files / one BAM file.
 Fastqs as input:
 
 ```
-easy_quant pipeline \
+bp_quant pipeline \
   -1 example_data/example_rna-seq_R1_001.fastq.gz \
   -2 example_data/example_rna-seq_R1_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
@@ -110,7 +114,7 @@ easy_quant pipeline \
 BAM as input:
 
 ```
-easy_quant pipeline \
+bp_quant pipeline \
   -b example_data/example_rna-seq.bam \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \

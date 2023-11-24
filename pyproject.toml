@@ -3,15 +3,15 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "easy_quant"
+name = "bp_quant"
 version = "0.5.0"
 authors = [
-  {name = "Patrick Sorn", email = "patrick.sorn@tron-mainz.de"},
-  {name = "Jonas Ibn-Salem", email = "jonas.ibn-salem@tron-mainz.de"},
-  {name = "Franziska Lang", email = "franziska.lang@tron-mainz.de"},
+  {name = "TRON - Translational Oncology at the University Medical Center of the Johannes Gutenberg University Mainz", email = "patrick.sorn@tron-mainz.de"},
 ]
 maintainers = [
   {name = "Patrick Sorn", email = "patrick.sorn@tron-mainz.de"},
+  {name = "Jonas Ibn-Salem", email = "jonas.ibn-salem@tron-mainz.de"},
+  {name = "Franziska Lang", email = "franziska.lang@tron-mainz.de"},
 ]
 description = 'Quantification of reads at defined positions to verify custom input sequences. Given a gene fusion or splicing junction of interest, this tool can quantify RNA-seq reads supporting the breakpoint (or splice junction) by quantifying reads that map to the breakpoint (junction reads) and read pairs that span the breakpoint (spanning pairs).'
 readme = "README.md"
@@ -32,7 +32,7 @@ classifiers = [
 dynamic = ["dependencies"]
 
 [tool.setuptools]
-packages = ["easy_quant"]
+packages = ["bp_quant"]
 package-dir = {"" = "src"}
 py-modules = []
 
@@ -43,4 +43,4 @@ dependencies = {file = ["requirements.txt"]}
 Homepage = "https://github.com/tron-bioinformatics/easyquant"
 
 [project.scripts]
-easy_quant = "easy_quant.command_line:easy_quant_cli"
+bp_quant = "bp_quant.command_line:bp_quant_cli"
