@@ -68,12 +68,12 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
     # define match bases for get_aligned_pairs()
     MATCH_BASES = ['A', 'C', 'G', 'T']
 
-    read_info = {"junc": False, "within": False, "interval": "", "anchor": 0}
+    read_info = {"junc": False, "within": False, "interval": "", "anchor": 0, "nm_in_bp_area": 0}
 
     for (interval_name, ref_start, ref_stop) in intervals:
         # Check if read spans ref start
         if aln_start <= ref_stop - bp_dist and aln_stop >= ref_stop + bp_dist:
-        
+            num_mismatches = 0
             # test that read maps exact (or no del/ins) in pos +/- bp_dist
 
             reg_start = ref_stop - bp_dist
@@ -90,12 +90,16 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
             # test if reference sequence are all capital (means match) according
             # to https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_aligned_pairs
             aln_seq = [s for (q, r, s) in aln_pairs if r is not None and reg_start <= r and r < reg_end]
-            no_snp = all(s in MATCH_BASES for s in aln_seq)
+            # Get number of mismatches for this read
+            match_list = [s in MATCH_BASES for s in aln_seq]
+            no_snp = all(match_list)
+            num_mismatches = match_list.count(False)
             if (no_ins_or_del and no_snp) or allow_mismatches:
                 anchor = min(aln_stop - ref_stop, ref_stop - aln_start)
                 read_info["junc"] = True
                 read_info["anchor"] = anchor
                 read_info["interval"] = interval_name
+                read_info["nm_in_bp_area"] = num_mismatches
 
         
         # read maps completely within the interval
@@ -117,6 +121,15 @@ class Quantification(object):
         self.quant_file = os.path.join(output_path, "quantification.tsv")
         self.reads_file = os.path.join(output_path, "read_info.tsv.gz")
         self.reads_out = gzip.open(self.reads_file, "wb")
+        self.reads_out.write(("\t".join([
+            "name",
+            "mate",
+            "reference",
+            "start",
+            "end",
+            "num_mismatches_in_bp_area",
+            "classification"
+        ]) + "\n").encode())
         self.bp_dist = bp_dist
         self.allow_mismatches = allow_mismatches
         self.interval_mode = interval_mode
@@ -382,8 +395,18 @@ class Quantification(object):
             r1_type = "softjunc"
         if not r2_type:
             r2_type = "softjunc"
-        self.reads_out.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(read_name, "R1", seq_name, r1_start, r1_stop, r1_type).encode())
-        self.reads_out.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(read_name, "R2", seq_name, r2_start, r2_stop, r2_type).encode())
+        r1_mismatches = r1_info["nm_in_bp_area"]
+        r2_mismatches = r2_info["nm_in_bp_area"]
+        self.reads_out.write(
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                read_name, "R1", seq_name, r1_start, r1_stop, r1_mismatches, r1_type
+            ).encode()
+        )
+        self.reads_out.write(
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                read_name, "R2", seq_name, r2_start, r2_stop, r2_mismatches, r2_type
+            ).encode()
+        )
 
 
     def write_results(self):

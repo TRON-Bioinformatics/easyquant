@@ -20,6 +20,7 @@ breakpoint (spanning pairs).
 - Count reads using `bp_quant count`
 - Output: 
     - Table with read counts per input sequence
+    - Table with info on each read (`read_info.tsv`)
 
 ## Dependencies
 

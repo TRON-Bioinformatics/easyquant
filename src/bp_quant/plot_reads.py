@@ -53,6 +53,7 @@ def plot(seq_to_pos, read_info, output_path):
     read_dict = {}
 
     with open(read_info) as inf:
+        next(inf)
         for line in inf:
             elements = line.rstrip().split("\t")
             read_name = elements[0]
@@ -60,7 +61,8 @@ def plot(seq_to_pos, read_info, output_path):
             seq_name = elements[2]
             start = int(elements[3])
             stop = int(elements[4])
-            read_type = elements[5]
+            mismatches = int(elements[5])
+            read_type = elements[6]
             
             if seq_name not in read_dict:
                 read_dict[seq_name] = {}
@@ -137,6 +139,7 @@ def add_plot_reads_args(parser):
         help="Output file",
         required=True
     )
+    parser.set_defaults(func=plot_reads_command)
 
     
 def plot_reads_command(args):
