@@ -67,4 +67,5 @@ def bp_quant_cli():
     try:
         args.func(args)
     except AttributeError as e:
+        print(e)
         parser.parse_args(["--help"])
