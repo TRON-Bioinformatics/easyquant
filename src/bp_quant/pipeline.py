@@ -198,9 +198,10 @@ class Pipeline(object):
             ])
 
 
-        sam_to_bam_cmd = "samtools sort -o {1} {0} && samtools index {1}".format(
+        sam_to_bam_cmd = "samtools sort -@ {2} -m 2G -o {1} {0} && samtools index {1}".format(
             sam_file,
-            bam_file
+            bam_file,
+            num_threads
         )
 
         allow_mismatches_str = ""
