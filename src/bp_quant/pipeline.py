@@ -258,12 +258,13 @@ class Pipeline(object):
         if not os.path.exists(sam_file) or os.stat(sam_file).st_size == 0:
             IOMethods.execute_cmd(align_cmd)
 
-        if not os.path.exists(bam_file) or os.stat(bam_file).st_size == 0:
-            IOMethods.execute_cmd(sam_to_bam_cmd)
-
         if not os.path.exists(quant_file) or os.stat(quant_file).st_size == 0:
             IOMethods.execute_cmd(quant_cmd)
-    
+
+        if self.keep_bam or self.keep_all:
+            if not os.path.exists(bam_file) or os.stat(bam_file).st_size == 0:
+                IOMethods.execute_cmd(sam_to_bam_cmd)
+            
         if not self.keep_all:
             IOMethods.execute_cmd(clean_cmd)
 
