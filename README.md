@@ -45,20 +45,20 @@ cd easyquant
 conda env create -f environment.yml --prefix conda_env/
 conda activate conda_env/
 
-pip install .
+python -m build
+pip install dist/*.whl
 ```
 
 ## Usage
 
 ```
 usage: bp_quant pipeline [-h] [-1 FQ1] [-2 FQ2] [-b BAM] -s SEQ_TAB -o
-                           OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
-                           [--interval_mode] [-m {star,bowtie2,bwa}]
-                           [-t NUM_THREADS]
-                           [--star_cmd_params STAR_CMD_PARAMS]
-                           [--keep_bam | --keep_all]
+                         OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
+                         [--interval_mode] [-m {star,bowtie2,bwa}]
+                         [-t NUM_THREADS] [--star_cmd_params STAR_CMD_PARAMS]
+                         [--keep_aln | --keep_all]
 
-Runs the complete EasyQuant pipeline
+Runs the complete bpquant pipeline
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -86,8 +86,7 @@ optional arguments:
   --star_cmd_params STAR_CMD_PARAMS
                         Specify STAR commandline parameters to use for the
                         alignment
-  --keep_bam            Do not delete alignment in BAM format during clean up
-                        step
+  --keep_aln            Do not delete alignment files during clean up step
   --keep_all            Do not perform clean up step after re-quantification
 
 Copyright (c) 2023 TRON gGmbH (See LICENSE for licensing details)

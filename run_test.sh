@@ -1,7 +1,13 @@
 #!/bin/bash
 
+
 #================================================================
-# Test run for bp_qant.py on example data
+# Test run using comma-separated input file
+# Input data: FASTQ
+# Aligner: STAR
+# Interval Mode: False
+# Allow Mismatches in BP area(s): False
+# Keep temporary files: False
 #================================================================
 
 # Remove existing output folder
@@ -15,10 +21,59 @@ bp_quant pipeline \
   -d 10 \
   -o example_out_csv \
   -t 12 \
+  -m star
+
+#================================================================
+# Test run using comma-separated input file
+# Input data: FASTQ
+# Aligner: STAR with individual parameters
+# Interval Mode: False
+# Allow Mismatches in BP area(s): False
+# Keep temporary files: False
+#================================================================
+
+# Remove existing output folder
+rm -rf example_out_csv_custom_params
+
+# Run pipeline
+bp_quant pipeline \
+  -1 example_data/example_rna-seq_R1_001.fastq.gz \
+  -2 example_data/example_rna-seq_R2_001.fastq.gz \
+  -s example_data/CLDN18_Context_seq.csv \
+  -d 10 \
+  -o example_out_csv \
+  -t 12 \
   --star_cmd_params "--outFilterMismatchNoverReadLmax 0.3 --scoreDelOpen -2 --scoreInsOpen -2 --scoreDelBase -2 --scoreInsBase -2"
 
 #================================================================
+# Test run using a comma-separated input file
+# Input data: FASTQ
+# Aligner: STAR with individual parameters
+# Interval Mode: False
+# Allow Mismatches in BP area(s): False
+# Keep temporary files: All
+#================================================================
+
+# Remove existing output folder
+rm -rf example_out_csv_keep_all
+
+# Run pipeline
+bp_quant pipeline \
+  -1 example_data/example_rna-seq_R1_001.fastq.gz \
+  -2 example_data/example_rna-seq_R2_001.fastq.gz \
+  -s example_data/CLDN18_Context_seq.csv \
+  -d 10 \
+  -o example_out_csv_keep_all \
+  -t 12 \
+  --keep_all
+
+#================================================================
 # Test run using a tab-separated input file
+# Input data: FASTQ
+# Aligner: STAR
+# Interval Mode: False
+# Allow Mismatches in BP area(s): False
+# Keep temporary files: False
 #================================================================
 
 # Remove existing output folder
@@ -33,7 +88,12 @@ bp_quant pipeline \
 
 
 #================================================================
-# Test run using different aligner
+# Test run using a tab-separated input file
+# Input data: FASTQ
+# Aligner: bowtie2
+# Interval Mode: False
+# Allow Mismatches in BP area(s): False
+# Keep temporary files: False
 #================================================================
 
 # Remove existing output folder
@@ -47,6 +107,16 @@ bp_quant pipeline \
   -o example_out_csv_bowtie2 \
   -m bowtie2
 
+
+#================================================================
+# Test run using a tab-separated input file
+# Input data: FASTQ
+# Aligner: bwa
+# Interval Mode: False
+# Allow Mismatches in BP area(s): False
+# Keep temporary files: False
+#================================================================
+
 # Remove existing output folder
 rm -rf example_out_csv_bwa
 
@@ -58,8 +128,14 @@ bp_quant pipeline \
   -o example_out_csv_bwa \
   -m bwa
 
+
 #================================================================
-# Test run using interval mode
+# Test run using comma-separated input file
+# Input data: FASTQ
+# Aligner: STAR
+# Interval Mode: True
+# Allow Mismatches in BP area(s): False
+# Keep temporary files: False
 #================================================================
 
 # Remove existing output folder
@@ -75,7 +151,12 @@ bp_quant pipeline \
 
 
 #================================================================
-# Test run using interval mode
+# Test run using comma-separated input file
+# Input data: FASTQ
+# Aligner: STAR
+# Interval Mode: False
+# Allow Mismatches in BP area(s): True
+# Keep temporary files: False
 #================================================================
 
 # Remove existing output folder
@@ -91,7 +172,12 @@ bp_quant pipeline \
 
 
 #================================================================
-# Test run using BAM file as input
+# Test run using comma-separated input file
+# Input data: BAM
+# Aligner: STAR
+# Interval Mode: False
+# Allow Mismatches in BP area(s): True
+# Keep temporary files: False
 #================================================================
 
 # Remove existing output folder
@@ -107,33 +193,22 @@ bp_quant pipeline \
 
 
 #================================================================
-# Test run keeping alignment as BAM
+# Test run using comma-separated input file
+# Input data: BAM
+# Aligner: STAR
+# Interval Mode: False
+# Allow Mismatches in BP area(s): True
+# Keep temporary files: CRAM only
 #================================================================
 
 # Remove existing output folder
-rm -rf example_out_keep_bam
+rm -rf example_out_csv_keep_aln
 
 # Run pipeline
 bp_quant pipeline \
   -b example_data/example_rna-seq.bam \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
-  -o example_out_keep_bam \
+  -o example_out_csv_keep_aln \
   -t 12 \
-  --keep_bam
-
-#================================================================
-# Test run without clean up step
-#================================================================
-
-# Remove existing output folder
-rm -rf example_out_keep_all
-
-# Run pipeline
-bp_quant pipeline \
-  -b example_data/example_rna-seq.bam \
-  -s example_data/CLDN18_Context_seq.csv \
-  -d 10 \
-  -o example_out_keep_all \
-  -t 12 \
-  --keep_all
+  --keep_aln

@@ -29,7 +29,7 @@ def __get_read_count_bam(bam_file):
 
 class Pipeline(object):
     
-    def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode, keep_bam, keep_all):
+    def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode, keep_aln, keep_all):
 
         self.working_dir = os.path.abspath(working_dir)
         self.module_dir = os.path.dirname(os.path.realpath(__file__))
@@ -59,7 +59,7 @@ class Pipeline(object):
         self.bp_distance = bp_distance
         self.allow_mismatches = allow_mismatches
         self.interval_mode = interval_mode
-        self.keep_bam = keep_bam
+        self.keep_aln = keep_aln
         self.keep_all = keep_all
 
         
@@ -107,18 +107,14 @@ class Pipeline(object):
 
         fasta_file = os.path.join(self.working_dir, "context.fa")
         sam_file = os.path.join(align_path, "Aligned.out.sam")
-        bam_file = ""
-        if self.fq1 and self.fq2:
-            bam_file = os.path.join(align_path, "Aligned.out.bam")
-        elif self.bam:
-            bam_file = os.path.join(align_path, "Processed.out.bam")
+        cram_file = os.path.join(align_path, "Aligned.out.cram")
         quant_file = os.path.join(self.working_dir, "quantification.tsv")
         num_reads_file = os.path.join(self.working_dir, "num_reads.txt")
         # Define files to be deleted after successful run
         clean_up_files = [genome_path, fasta_file, sam_file]
-        if not self.keep_bam:
-            clean_up_files.append(bam_file)
-            clean_up_files.append("{}.bai".format(bam_file))
+        if not self.keep_aln:
+            clean_up_files.append(cram_file)
+            clean_up_files.append("{}.crai".format(cram_file))
         
         #create folders
         IOMethods.create_folder(align_path)
@@ -197,10 +193,12 @@ class Pipeline(object):
                 "{}/_STARtmp".format(align_path),
             ])
 
-
-        sam_to_bam_cmd = "samtools sort -o {1} {0} && samtools index {1}".format(
+            
+        sam_to_cram_cmd = "samtools sort -@ {2} -m 2G --reference {3} -O CRAM -o {1} {0} && samtools index {1}".format(
             sam_file,
-            bam_file
+            cram_file,
+            num_threads,
+            fasta_file
         )
 
         allow_mismatches_str = ""
@@ -224,8 +222,7 @@ class Pipeline(object):
         )
 
         clean_cmd = "for file in {}; \
-            do {{ test -f $file && rm $file; }} || \
-            {{ test -d $file && rm -r $file; }} done".format(" ".join(clean_up_files))
+            do rm -rf $file; done".format(" ".join(clean_up_files))
 
         # define bash script in working directory    
         shell_script = os.path.join(self.working_dir, "requant.sh")
@@ -233,10 +230,10 @@ class Pipeline(object):
         with open(shell_script, "w") as out_shell:
             out_shell.write("#!/bin/sh\n\n")
             if self.fq1 and self.fq2:
-                out_shell.write("fq1={}\n".format(self.fq1))
-                out_shell.write("fq2={}\n".format(self.fq2))
+                out_shell.write("fq1_in={}\n".format(self.fq1))
+                out_shell.write("fq2_in={}\n".format(self.fq2))
             elif self.bam:
-                out_shell.write("bam={}\n".format(self.bam))
+                out_shell.write("bam_in={}\n".format(self.bam))
             out_shell.write("working_dir={}\n".format(self.working_dir))
             out_shell.write("echo \"Starting pipeline...\"\n")
             out_shell.write("echo \"Generating index\"\n")
@@ -244,10 +241,13 @@ class Pipeline(object):
             out_shell.write("echo \"Starting alignment\"\n")
             out_shell.write("{}\n".format(align_cmd))
             out_shell.write("echo \"Starting quantification\"\n")
-            if not self.keep_all:
-                out_shell.write("{}\n".format(quant_cmd))
+            out_shell.write("{}\n".format(quant_cmd))
+            if self.keep_aln or self.keep_all:
+                out_shell.write("echo \"Starting SAM->CRAM conversion\"\n")
+                out_shell.write("{}\n".format(sam_to_cram_cmd))
+            else:
                 out_shell.write("echo \"Starting cleanup step\"\n")
-            out_shell.write("{}\n".format(clean_cmd))
+                out_shell.write("{}\n".format(clean_cmd))
             out_shell.write("echo \"Processing done!\"\n")
 
 
@@ -257,12 +257,13 @@ class Pipeline(object):
         if not os.path.exists(sam_file) or os.stat(sam_file).st_size == 0:
             IOMethods.execute_cmd(align_cmd)
 
-        if not os.path.exists(bam_file) or os.stat(bam_file).st_size == 0:
-            IOMethods.execute_cmd(sam_to_bam_cmd)
-
         if not os.path.exists(quant_file) or os.stat(quant_file).st_size == 0:
             IOMethods.execute_cmd(quant_cmd)
-    
+
+        if self.keep_aln or self.keep_all:
+            if not os.path.exists(cram_file) or os.stat(cram_file).st_size == 0:
+                IOMethods.execute_cmd(sam_to_cram_cmd)
+            
         if not self.keep_all:
             IOMethods.execute_cmd(clean_cmd)
 
@@ -347,9 +348,9 @@ def add_pipeline_args(parser):
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
-        "--keep_bam",
-        dest="keep_alignment",
-        help="Do not delete alignment in BAM format during clean up step",
+        "--keep_aln",
+        dest="keep_aln",
+        help="Do not delete alignment files during clean up step",
         action="store_true"
     )
     group.add_argument(
@@ -371,7 +372,7 @@ def pipeline_command(args):
         working_dir=args.output_folder,
         allow_mismatches=args.allow_mismatches,
         interval_mode=args.interval_mode,
-        keep_bam=args.keep_alignment,
+        keep_aln=args.keep_aln,
         keep_all=args.keep_all
     )
     pipe.run(args.method, args.num_threads, args.star_cmd_params)
