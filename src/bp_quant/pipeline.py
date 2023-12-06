@@ -221,9 +221,6 @@ class Pipeline(object):
             interval_mode_str
         )
 
-        #clean_cmd = "for file in {}; \
-        #    do test -f $file && rm $file || \
-        #       test -d $file && rm -rf $file; done".format(" ".join(clean_up_files))
         clean_cmd = "for file in {}; \
             do rm -rf $file; done".format(" ".join(clean_up_files))
 
