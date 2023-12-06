@@ -45,7 +45,8 @@ cd easyquant
 conda env create -f environment.yml --prefix conda_env/
 conda activate conda_env/
 
-pip install .
+python -m build
+pip install dist/*.whl
 ```
 
 ## Usage

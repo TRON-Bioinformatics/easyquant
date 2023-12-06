@@ -221,9 +221,11 @@ class Pipeline(object):
             interval_mode_str
         )
 
+        #clean_cmd = "for file in {}; \
+        #    do test -f $file && rm $file || \
+        #       test -d $file && rm -rf $file; done".format(" ".join(clean_up_files))
         clean_cmd = "for file in {}; \
-            do {{ test -f $file && rm $file; }} || \
-            {{ test -d $file && rm -r $file; }} done".format(" ".join(clean_up_files))
+            do rm -rf $file; done".format(" ".join(clean_up_files))
 
         # define bash script in working directory    
         shell_script = os.path.join(self.working_dir, "requant.sh")
