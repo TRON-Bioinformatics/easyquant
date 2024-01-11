@@ -16,15 +16,15 @@ def get_read_count(infile, format="fq"):
     
 def __get_read_count_fq(fq_file):
     """Parses input FASTQ to get read count"""
-    ps = subprocess.Popen(("zcat", fq_file), stdout=subprocess.PIPE)
+    ps = subprocess.Popen(("zgrep '^+'", fq_file), stdout=subprocess.PIPE)
     result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
-    return int(result) / 2
+    return int(result)
 
 
 def __get_read_count_bam(bam_file):
     """Parses input BAM to get read count"""
     result = subprocess.check_output(["samtools", "view", "-c", bam_file])
-    return int(result)
+    return int(result) / 2
 
 
 class Pipeline(object):
