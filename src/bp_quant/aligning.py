@@ -2,7 +2,8 @@ import subprocess
 
 
 def get_align_cmd_bowtie2(fq1, fq2, index_dir, out_dir, num_threads):
-    cmd = "bowtie2 -p {0} -x {1}/bowtie -1 {2} -2 {3} -S {4}/Aligned.out.sam".format(
+    # -a reports all alignments not just the best
+    cmd = "bowtie2 -p {0} -x {1}/bowtie -a --end-to-end -1 {2} -2 {3} -S {4}/Aligned.out.sam".format(
         num_threads,
         index_dir,
         fq1,
