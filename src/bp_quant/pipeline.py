@@ -111,10 +111,11 @@ class Pipeline(object):
         quant_file = os.path.join(self.working_dir, "quantification.tsv")
         num_reads_file = os.path.join(self.working_dir, "num_reads.txt")
         # Define files to be deleted after successful run
-        clean_up_files = [genome_path, fasta_file, sam_file]
+        clean_up_files = [genome_path, sam_file]
         if not self.keep_aln:
             clean_up_files.append(cram_file)
             clean_up_files.append("{}.crai".format(cram_file))
+            clean_up_files.append(fasta_file)
         
         #create folders
         IOMethods.create_folder(align_path)
