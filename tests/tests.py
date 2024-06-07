@@ -5,7 +5,7 @@ import unittest
 
 SEQ_TABLE_FILE = os.path.join("example_data", "CLDN18_Context_seq.csv")
 
-from easy_quant.requantify import perc_true, get_seq_to_pos, classify_read
+from bp_quant.requantify import perc_true, get_seq_to_pos, classify_read
 
 
 class TestRequantify(unittest.TestCase):
@@ -51,7 +51,7 @@ class TestRequantify(unittest.TestCase):
             ('0_400', 0, 400),
             ('400_786', 400, 786)
         ]
-        result = {"junc": True, "within": False, "interval": "0_400", "anchor": 15}
+        result = {"junc": True, "within": False, "interval": "0_400", "anchor": 15, "nm_in_bp_area": 0}
         self.assertEqual(classify_read(365, 415, aln_pairs, interval, True, 10), result)
 
 
@@ -61,7 +61,7 @@ class TestRequantify(unittest.TestCase):
             ('0_400', 0, 400),
             ('400_786', 400, 786)
         ]
-        result = {"junc": False, "within": True, "interval": "400_786", "anchor": 0}
+        result = {"junc": False, "within": True, "interval": "400_786", "anchor": 0, "nm_in_bp_area": 0}
         self.assertEqual(classify_read(609, 658, aln_pairs, interval, True, 10), result)
 
 
@@ -133,7 +133,7 @@ class TestRequantify(unittest.TestCase):
             ('0_200', 0, 200),
             ('200_400', 200, 400)
         ]
-        result = {"junc": True, "interval": "0_200", "within": False, "anchor": 22}
+        result = {"junc": True, "interval": "0_200", "within": False, "anchor": 22, "nm_in_bp_area": 0}
         self.assertEqual(classify_read(172, 222, aln_pairs, interval, True, 10), result)
         
 

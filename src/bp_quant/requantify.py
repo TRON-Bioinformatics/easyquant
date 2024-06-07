@@ -71,8 +71,9 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
     read_info = {"junc": False, "within": False, "interval": "", "anchor": 0, "nm_in_bp_area": 0}
 
     for (interval_name, ref_start, ref_stop) in intervals:
-        # Check if read spans ref start
         if aln_start <= ref_stop - bp_dist and aln_stop >= ref_stop + bp_dist:
+            # Check if read spans ref start
+            #if aln_start <= ref_stop - bp_dist and aln_stop >= ref_stop + bp_dist:
             num_mismatches = 0
             # test that read maps exact (or no del/ins) in pos +/- bp_dist
 
@@ -84,8 +85,8 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
 
             # check if boundary positions are aligned and if the stretch length matches on read and reference
             no_ins_or_del = q_start is not None and \
-                            q_end is not None and \
-                            (q_end - q_start) == (reg_end - reg_start)
+                q_end is not None and \
+                (q_end - q_start) == (reg_end - reg_start)
 
             # test if reference sequence are all capital (means match) according
             # to https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_aligned_pairs
@@ -94,13 +95,14 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
             match_list = [s in MATCH_BASES for s in aln_seq]
             no_snp = all(match_list)
             num_mismatches = match_list.count(False)
-            if (no_ins_or_del and no_snp) or allow_mismatches:
+            if no_ins_or_del and no_snp:
                 anchor = min(aln_stop - ref_stop, ref_stop - aln_start)
-                read_info["junc"] = True
                 read_info["anchor"] = anchor
                 read_info["interval"] = interval_name
                 read_info["nm_in_bp_area"] = num_mismatches
-
+            
+                if anchor >= bp_dist:
+                    read_info["junc"] = True
         
         # read maps completely within the interval
         #if aln_start > ref_start - bp_dist and aln_stop < ref_stop + bp_dist:
@@ -325,7 +327,7 @@ class Quantification(object):
                         self.cov_dict[seq_name][interval_name][r] += 1
 
             # Check if reads are junction reads
-            if r1_info["junc"]:
+            if r1_info["junc"] and (self.allow_mismatches or r1_info["nm_in_bp_area"] == 0):
                 if self.interval_mode:
                     self.counts[seq_name][interval_name][0] += 1
                 else:
@@ -352,7 +354,7 @@ class Quantification(object):
                         self.cov_dict[seq_name][interval_name][r] += 1
 
 
-            if r2_info["junc"]:
+            if r2_info["junc"] and (self.allow_mismatches or r2_info["nm_in_bp_area"] == 0):
                 if self.interval_mode:
                     self.counts[seq_name][interval_name][0] += 1
                 else:
@@ -391,9 +393,9 @@ class Quantification(object):
             r1_type = "span"
             r2_type = "span"
 
-        if not r1_type:
+        if 0 < r1_info["anchor"] <= self.bp_dist:
             r1_type = "softjunc"
-        if not r2_type:
+        if 0 < r2_info["anchor"] <= self.bp_dist:
             r2_type = "softjunc"
         r1_mismatches = r1_info["nm_in_bp_area"]
         r2_mismatches = r2_info["nm_in_bp_area"]
