@@ -188,6 +188,7 @@ Using the interval mode the output will look slightly different:
 | HPRT1         | 400_793  | 0                          | 0                       | 974             | 0.98          | 126.40        | 101.0           |
 
 
+Hint: This is just an example to illustrate the design of the table. Results may differ.
 
 
 #### Columns in output file
