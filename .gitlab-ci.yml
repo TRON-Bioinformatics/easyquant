@@ -9,6 +9,7 @@ test_pipeline:
     - mamba env create -f environment.yml --prefix conda_env/
     - source /opt/conda/bin/activate conda_env/
     - pip install .
+    - python -m unittest tests/tests.py
     - bash run_test.sh
 
 deploy-job:      # This job runs in the deploy stage.
