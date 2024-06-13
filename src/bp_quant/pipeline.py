@@ -18,7 +18,7 @@ def __get_read_count_fq(fq_file):
     """Parses input FASTQ to get read count"""
     ps = subprocess.Popen(("zcat", fq_file), stdout=subprocess.PIPE)
     result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
-    return int(result) / 2
+    return int(result) / 4
 
 
 def __get_read_count_bam(bam_file):
@@ -111,10 +111,11 @@ class Pipeline(object):
         quant_file = os.path.join(self.working_dir, "quantification.tsv")
         num_reads_file = os.path.join(self.working_dir, "num_reads.txt")
         # Define files to be deleted after successful run
-        clean_up_files = [genome_path, fasta_file, sam_file]
+        clean_up_files = [genome_path, sam_file]
         if not self.keep_aln:
             clean_up_files.append(cram_file)
             clean_up_files.append("{}.crai".format(cram_file))
+            clean_up_files.append(fasta_file)
         
         #create folders
         IOMethods.create_folder(align_path)

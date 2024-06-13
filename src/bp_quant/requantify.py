@@ -189,7 +189,7 @@ class Quantification(object):
 
         for read in bam.fetch():
 
-            if read.flag > 255:
+            if read.flag > 511:
                 continue
             # Handle missing reference sequences which occur in SAM/BAM
             # but not in seq_table.csv
