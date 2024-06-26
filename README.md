@@ -213,3 +213,16 @@ Hint: This is just an example to illustrate the design of the table. Results may
  - **coverage_perc** percentual coverage of the interval by aligned reads
  - **coverage_mean** average coverage per base for the interval (fold coverage)
  - **coverage_median** median coverage per base for the interval
+
+
+### Things to consider
+
+When choosing the aligner you have to take into account that there are several differences among them:
+
+- STAR: 
+  - end-to-end alignment with no soft-clipping
+  - very slow for small reference sequences
+  - several available alignment parameters to optimize your results, which can be used while starting the pipeline
+- bowtie2: 
+  - end-to-end alignment might lead to insertions where the context sequence starts/ends
+  - faster than STAR for short reference sequences (index creation parameters are calculated automatically)

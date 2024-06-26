@@ -5,10 +5,15 @@ import unittest
 
 SEQ_TABLE_FILE = os.path.join("example_data", "CLDN18_Context_seq.csv")
 
-from bp_quant.requantify import perc_true, get_seq_to_pos, classify_read
+from bp_quant.requantify import get_aligner, perc_true, get_seq_to_pos, classify_read
 
 
 class TestRequantify(unittest.TestCase):
+
+    def test_get_aligner(self):
+        bam_file = os.path.join("example_data", "example_rna-seq.bam")
+        self.assertEqual(get_aligner(bam_file), "star")
+
 
     def test_perc_true(self):
         data = [4, 3, 0, 5, 9, 0, 1, 0, 0, 0]
