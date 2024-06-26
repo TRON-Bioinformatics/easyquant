@@ -196,7 +196,9 @@ class Quantification(object):
         missing_refs = {}
         r1 = None
         r2 = None
+        n = 0
         for read in bam.fetch():
+            n += 1
             if read.flag > 511:
                 continue
             # Handle missing reference sequences which occur in SAM/BAM
@@ -205,15 +207,18 @@ class Quantification(object):
                 if read.reference_name not in missing_refs:
                     missing_refs[read.reference_name] = 0
                 missing_refs[read.reference_name] += 1
-            if not r1:
-                r1 = read
-                if r1.is_secondary and self.aligner == "bowtie2":
-                    r2 = pysam.AlignedSegment(bam.header)
-                    r2.reference_name = r1.reference_name
-                    r2.query_name = r1.query_name
-                    r2.is_unmapped = True
-            elif r1 and not r2:
-                r2 = read
+            if read.is_secondary and self.aligner == "bowtie2":
+                r1_sec = read
+                r2_sec = pysam.AlignedSegment(bam.header)
+                r2_sec.reference_name = r1_sec.reference_name
+                r2_sec.query_name = r1_sec.query_name
+                r2_sec.is_unmapped = True
+                self.quantify(r1_sec, r2_sec)
+            else:
+                if not r1:
+                    r1 = read
+                elif r1 and not r2:
+                    r2 = read
                 
 
             if r1 and r2:
@@ -223,11 +228,14 @@ class Quantification(object):
                 # and therefore needs more relaxed clause
                 if not (r1.is_unmapped and r2.is_unmapped or
                     r1.query_name != r2.query_name):
-
                     if (r1.reference_name == r2.reference_name or
                         r1.is_unmapped and not r2.is_unmapped or
                         not r1.is_unmapped and r2.is_unmapped):
                         self.quantify(r1, r2)
+                elif r1.query_name != r2.query_name:
+                    print("MISMATCHING QUERY NAME!", r1, r2)
+                    print(n)
+                    break
                 r1 = None
                 r2 = None
         logger.info("Quantification done.")
