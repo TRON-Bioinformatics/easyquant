@@ -226,6 +226,3 @@ When choosing the aligner you have to take into account that there are several d
 - bowtie2: 
   - end-to-end alignment might lead to insertions where the context sequence starts/ends
   - faster than STAR for short reference sequences (index creation parameters are calculated automatically)
-- bwa:
-  - very few alignment parameters available
-  - accuracy can be optimized using gap penalties
