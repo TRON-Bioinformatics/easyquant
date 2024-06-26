@@ -196,9 +196,7 @@ class Quantification(object):
         missing_refs = {}
         r1 = None
         r2 = None
-        n = 0
         for read in bam.fetch():
-            n += 1
             if read.flag > 511:
                 continue
             # Handle missing reference sequences which occur in SAM/BAM
@@ -207,6 +205,19 @@ class Quantification(object):
                 if read.reference_name not in missing_refs:
                     missing_refs[read.reference_name] = 0
                 missing_refs[read.reference_name] += 1
+            # Bowtie reports alignments in the following order,
+            # therefore the following if statement prevents
+            # mismatching issues for read pairs where
+            # there are secondary alignments:
+            # R1
+            # R1_secondary_1
+            # R1_secondary_2
+            # R1_secondary_3
+            # R2
+            # ...
+            # Secondary alignments will be excluded from the matching process
+            # and unmapped mates will be simulated as they are not reported
+            # within the bowtie2 alignment
             if read.is_secondary and self.aligner == "bowtie2":
                 r1_sec = read
                 r2_sec = pysam.AlignedSegment(bam.header)
@@ -234,7 +245,6 @@ class Quantification(object):
                         self.quantify(r1, r2)
                 elif r1.query_name != r2.query_name:
                     print("MISMATCHING QUERY NAME!", r1, r2)
-                    print(n)
                     break
                 r1 = None
                 r2 = None
