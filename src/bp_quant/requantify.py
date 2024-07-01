@@ -15,6 +15,15 @@ logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def get_aligner(bam_file):
+    """
+    Uses pysam to detect the aligner used to create the input BAM file
+    """
+    header_dict = pysam.AlignmentFile(bam_file, "rb").header.to_dict()
+    aligner = header_dict["PG"][0]["ID"].lower()
+    return aligner
+
+
 def perc_true(lst):
     n = len(lst)
     num_true = sum(1 for val in lst if val > 0)
@@ -117,6 +126,7 @@ class Quantification(object):
     def __init__(self, seq_table_file, bam_file, output_path, bp_dist, allow_mismatches, interval_mode):
         self.seq_table_file = seq_table_file
         self.bam_file = bam_file
+        self.aligner = get_aligner(bam_file)
         self.output_path = os.path.abspath(output_path)
         self.quant_file = os.path.join(output_path, "quantification.tsv")
         self.reads_file = os.path.join(output_path, "read_info.tsv.gz")
@@ -186,9 +196,7 @@ class Quantification(object):
         missing_refs = {}
         r1 = None
         r2 = None
-
         for read in bam.fetch():
-
             if read.flag > 511:
                 continue
             # Handle missing reference sequences which occur in SAM/BAM
@@ -197,10 +205,31 @@ class Quantification(object):
                 if read.reference_name not in missing_refs:
                     missing_refs[read.reference_name] = 0
                 missing_refs[read.reference_name] += 1
-            if not r1:
-                r1 = read
-            elif r1 and not r2:
-                r2 = read
+            # Bowtie reports alignments in the following order,
+            # therefore the following if statement prevents
+            # mismatching issues for read pairs where
+            # there are secondary alignments:
+            # R1
+            # R1_secondary_1
+            # R1_secondary_2
+            # R1_secondary_3
+            # R2
+            # ...
+            # Secondary alignments will be excluded from the matching process
+            # and unmapped mates will be simulated as they are not reported
+            # within the bowtie2 alignment
+            if read.is_secondary and self.aligner == "bowtie2":
+                r1_sec = read
+                r2_sec = pysam.AlignedSegment(bam.header)
+                r2_sec.reference_name = r1_sec.reference_name
+                r2_sec.query_name = r1_sec.query_name
+                r2_sec.is_unmapped = True
+                self.quantify(r1_sec, r2_sec)
+            else:
+                if not r1:
+                    r1 = read
+                elif r1 and not r2:
+                    r2 = read
                 
 
             if r1 and r2:
@@ -210,11 +239,13 @@ class Quantification(object):
                 # and therefore needs more relaxed clause
                 if not (r1.is_unmapped and r2.is_unmapped or
                     r1.query_name != r2.query_name):
-
                     if (r1.reference_name == r2.reference_name or
                         r1.is_unmapped and not r2.is_unmapped or
                         not r1.is_unmapped and r2.is_unmapped):
                         self.quantify(r1, r2)
+                elif r1.query_name != r2.query_name:
+                    print("MISMATCHING QUERY NAME!", r1, r2)
+                    break
                 r1 = None
                 r2 = None
         logger.info("Quantification done.")
