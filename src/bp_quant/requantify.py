@@ -101,9 +101,9 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
             aln_seq_junc = [s for (q, r, s) in aln_pairs if r is not None and reg_start <= r and r < reg_end]
             # Get number of mismatches for this read
             match_list_junc = [s in MATCH_BASES for s in aln_seq_junc]
-            no_snp = all(match_list)
-            
+            no_snp = all(match_list_junc)
             num_mismatches_junc = match_list_junc.count(False)
+            
             if (no_ins_or_del and no_snp) or allow_mismatches:
                 anchor = min(aln_stop - ref_stop, ref_stop - aln_start)
                 read_info["junc"] = True
