@@ -77,7 +77,7 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
     # define match bases for get_aligned_pairs()
     MATCH_BASES = ['A', 'C', 'G', 'T']
 
-    read_info = {"junc": False, "within": False, "interval": "", "anchor": 0, "nm_in_bp_area": 0}
+    read_info = {"junc": False, "within": False, "interval": "", "anchor": 0, "nm": 0, "nm_in_bp_area": 0}
 
     for (interval_name, ref_start, ref_stop) in intervals:
         # Check if read spans ref start
