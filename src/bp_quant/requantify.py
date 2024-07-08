@@ -143,6 +143,7 @@ class Quantification(object):
             "reference",
             "start",
             "end",
+            "cigar",
             "num_mismatches",
             "num_mismatches_in_bp_area",
             "classification"
@@ -291,6 +292,7 @@ class Quantification(object):
         read_name = r1.query_name
         seq_name = r1.reference_name
         
+        
         if seq_name not in self.seq_to_pos:
             return
 
@@ -328,7 +330,8 @@ class Quantification(object):
                 logger.error("Not possible to get read information. Skipping...")
                 return
 
-
+        r1_cigar = r1.cigarstring
+        r2_cigar = r2.cigarstring
 
         # Get read information [junc, within, interval]
         r1_info = classify_read(
@@ -439,13 +442,13 @@ class Quantification(object):
         r1_nm_junc = r1_info["nm_in_bp_area"]
         r2_nm_junc = r2_info["nm_in_bp_area"]
         self.reads_out.write(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                read_name, "R1", seq_name, r1_start, r1_stop, r1_nm, r1_nm_junc, r1_type
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                read_name, "R1", seq_name, r1_start, r1_stop, r1_cigar, r1_nm, r1_nm_junc, r1_type
             ).encode()
         )
         self.reads_out.write(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                read_name, "R2", seq_name, r2_start, r2_stop, r2_nm, r2_nm_junc, r2_type
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                read_name, "R2", seq_name, r2_start, r2_stop, r2_cigar, r2_nm, r2_nm_junc, r2_type
             ).encode()
         )
 
