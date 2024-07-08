@@ -154,13 +154,15 @@ class Pipeline(object):
             --index_dir {} \
             --output_path {} \
             -t {} \
-            -m {}".format(
+            -m {} \
+            --params {}".format(
                 self.fq1,
                 self.fq2,
                 genome_path,
                 align_path,
                 num_threads,
-                method
+                method,
+                align_cmd_params
             )
         elif self.bam:
             align_cmd = "bp_quant align \
@@ -168,12 +170,14 @@ class Pipeline(object):
             --index_dir {} \
             --output_path {} \
             -t {} \
-            -m {}".format(
+            -m {} \
+            --params {}".format(
                 self.bam,
                 genome_path,
                 align_path,
                 num_threads,
-                method
+                method,
+                align_cmd_params
             )
             
 
@@ -342,9 +346,9 @@ def add_pipeline_args(parser):
         default=1
     )
     parser.add_argument(
-        "--star_cmd_params",
-        dest="star_cmd_params",
-        help="Specify STAR commandline parameters to use for the alignment",
+        "--alignment_params",
+        dest="align_params",
+        help="Specify custom commandline parameters to use for the alignment",
         default=""
     )
     group = parser.add_mutually_exclusive_group()
@@ -376,4 +380,4 @@ def pipeline_command(args):
         keep_aln=args.keep_aln,
         keep_all=args.keep_all
     )
-    pipe.run(args.method, args.num_threads, args.star_cmd_params)
+    pipe.run(args.method, args.num_threads, args.align_params)
