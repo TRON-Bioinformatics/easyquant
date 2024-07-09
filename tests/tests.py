@@ -64,7 +64,7 @@ class TestRequantify(unittest.TestCase):
             ('0_400', 0, 400),
             ('400_786', 400, 786)
         ]
-        result = {"junc": True, "within": False, "interval": "0_400", "anchor": 15, "nm_in_bp_area": 0}
+        result = {"junc": True, "within": False, "interval": "0_400", "anchor": 15, "nm": 0, "nm_in_bp_area": 0}
         self.assertEqual(classify_read(365, 415, aln_pairs, interval, True, 10), result)
 
 
@@ -74,7 +74,7 @@ class TestRequantify(unittest.TestCase):
             ('0_400', 0, 400),
             ('400_786', 400, 786)
         ]
-        result = {"junc": False, "within": True, "interval": "400_786", "anchor": 0, "nm_in_bp_area": 0}
+        result = {"junc": False, "within": True, "interval": "400_786", "anchor": 0, "nm": 0, "nm_in_bp_area": 0}
         self.assertEqual(classify_read(609, 658, aln_pairs, interval, True, 10), result)
 
 
@@ -146,7 +146,7 @@ class TestRequantify(unittest.TestCase):
             ('0_200', 0, 200),
             ('200_400', 200, 400)
         ]
-        result = {"junc": True, "interval": "0_200", "within": False, "anchor": 22, "nm_in_bp_area": 0}
+        result = {"junc": True, "interval": "0_200", "within": False, "anchor": 22, "nm": 0, "nm_in_bp_area": 0}
         self.assertEqual(classify_read(172, 222, aln_pairs, interval, True, 10), result)
         
 

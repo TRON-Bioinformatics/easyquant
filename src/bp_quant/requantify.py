@@ -77,7 +77,7 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
     # define match bases for get_aligned_pairs()
     MATCH_BASES = ['A', 'C', 'G', 'T']
 
-    read_info = {"junc": False, "within": False, "interval": "", "anchor": 0, "nm_in_bp_area": 0}
+    read_info = {"junc": False, "within": False, "interval": "", "anchor": 0, "nm": 0, "nm_in_bp_area": 0}
 
     for (interval_name, ref_start, ref_stop) in intervals:
         # Check if read spans ref start
@@ -98,19 +98,25 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
 
             # test if reference sequence are all capital (means match) according
             # to https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_aligned_pairs
-            aln_seq = [s for (q, r, s) in aln_pairs if r is not None and reg_start <= r and r < reg_end]
+            aln_seq_junc = [s for (q, r, s) in aln_pairs if r is not None and reg_start <= r and r < reg_end]
             # Get number of mismatches for this read
-            match_list = [s in MATCH_BASES for s in aln_seq]
-            no_snp = all(match_list)
-            num_mismatches = match_list.count(False)
+            match_list_junc = [s in MATCH_BASES for s in aln_seq_junc]
+            no_snp = all(match_list_junc)
+            num_mismatches_junc = match_list_junc.count(False)
+            
             if (no_ins_or_del and no_snp) or allow_mismatches:
                 anchor = min(aln_stop - ref_stop, ref_stop - aln_start)
                 read_info["junc"] = True
                 read_info["anchor"] = anchor
                 read_info["interval"] = interval_name
-                read_info["nm_in_bp_area"] = num_mismatches
+                
+                read_info["nm_in_bp_area"] = num_mismatches_junc
 
-        
+        aln_seq = [s for (q, r, s) in aln_pairs]
+        match_list = [s in MATCH_BASES for s in aln_seq]
+        num_mismatches = match_list.count(False)
+        read_info["nm"] = num_mismatches
+
         # read maps completely within the interval
         #if aln_start > ref_start - bp_dist and aln_stop < ref_stop + bp_dist:
         if aln_start >= ref_start and aln_stop <= ref_stop:
@@ -137,6 +143,8 @@ class Quantification(object):
             "reference",
             "start",
             "end",
+            "cigar",
+            "num_mismatches",
             "num_mismatches_in_bp_area",
             "classification"
         ]) + "\n").encode())
@@ -284,6 +292,7 @@ class Quantification(object):
         read_name = r1.query_name
         seq_name = r1.reference_name
         
+        
         if seq_name not in self.seq_to_pos:
             return
 
@@ -321,7 +330,8 @@ class Quantification(object):
                 logger.error("Not possible to get read information. Skipping...")
                 return
 
-
+        r1_cigar = r1.cigarstring
+        r2_cigar = r2.cigarstring
 
         # Get read information [junc, within, interval]
         r1_info = classify_read(
@@ -426,16 +436,19 @@ class Quantification(object):
             r1_type = "softjunc"
         if not r2_type:
             r2_type = "softjunc"
-        r1_mismatches = r1_info["nm_in_bp_area"]
-        r2_mismatches = r2_info["nm_in_bp_area"]
+        # Get mismatch information
+        r1_nm = r1_info["nm"]
+        r2_nm = r2_info["nm"]
+        r1_nm_junc = r1_info["nm_in_bp_area"]
+        r2_nm_junc = r2_info["nm_in_bp_area"]
         self.reads_out.write(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                read_name, "R1", seq_name, r1_start, r1_stop, r1_mismatches, r1_type
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                read_name, "R1", seq_name, r1_start, r1_stop, r1_cigar, r1_nm, r1_nm_junc, r1_type
             ).encode()
         )
         self.reads_out.write(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                read_name, "R2", seq_name, r2_start, r2_stop, r2_mismatches, r2_type
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                read_name, "R2", seq_name, r2_start, r2_stop, r2_cigar, r2_nm, r2_nm_junc, r2_type
             ).encode()
         )
 
