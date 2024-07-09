@@ -149,7 +149,7 @@ class Pipeline(object):
         align_cmd = ""
         custom_params = ""
         if align_cmd_params:
-            custom_params = "--params {}".format(align_cmd_params)
+            custom_params = "--params '{}'".format(align_cmd_params)
         if self.fq1 and self.fq2:
             align_cmd = "bp_quant align \
             --fq1 {} \

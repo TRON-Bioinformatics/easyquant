@@ -112,9 +112,12 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
                 
                 read_info["nm_in_bp_area"] = num_mismatches_junc
 
-        aln_seq = [s for (q, r, s) in aln_pairs]
-        match_list = [s in MATCH_BASES for s in aln_seq]
-        num_mismatches = match_list.count(False)
+        if aln_pairs:
+            aln_seq = [s for (q, r, s) in aln_pairs if r is not None]
+            match_list = [s in MATCH_BASES for s in aln_seq]
+            num_mismatches = match_list.count(False)
+        else:
+            num_mismatches = 0
         read_info["nm"] = num_mismatches
 
         # read maps completely within the interval
