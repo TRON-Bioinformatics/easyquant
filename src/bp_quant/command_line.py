@@ -1,5 +1,4 @@
 import argparse
-import bp_quant
 from bp_quant.csv_to_fasta import add_csv_to_fasta_args
 from bp_quant.indexing import add_indexing_args
 from bp_quant.aligning import add_aligner_args
@@ -8,7 +7,7 @@ from bp_quant.plot_reads import add_plot_reads_args
 from bp_quant.pipeline import add_pipeline_args
 from bp_quant.version import version
 
-epilog = "Copyright (c) 2023 TRON gGmbH (See LICENSE for licensing details)"
+epilog = "Copyright (c) 2024 TRON gGmbH (See LICENSE for licensing details)"
 
 
 def bp_quant_cli():
