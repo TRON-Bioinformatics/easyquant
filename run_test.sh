@@ -43,7 +43,8 @@ bp_quant pipeline \
   -d 10 \
   -o example_out_csv \
   -t 12 \
-  --star_cmd_params "--outFilterMismatchNoverReadLmax 0.3 --scoreDelOpen -2 --scoreInsOpen -2 --scoreDelBase -2 --scoreInsBase -2"
+  -m star \
+  --alignment_params "--outFilterMismatchNoverReadLmax 0.3 --scoreDelOpen -2 --scoreInsOpen -2 --scoreDelBase -2 --scoreInsBase -2"
 
 #================================================================
 # Test run using a comma-separated input file
@@ -105,7 +106,8 @@ bp_quant pipeline \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.tsv \
   -o example_out_csv_bowtie2 \
-  -m bowtie2
+  -m bowtie2 \
+  --alignment_params "--dpad 0 --gbar 99999999 --mp 1,1 --np 1 --score-min L,0,-0.01"
 
 
 #================================================================
