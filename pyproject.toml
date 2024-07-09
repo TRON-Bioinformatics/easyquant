@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bp_quant"
-version = "0.5.4"
+version = "0.5.5"
 authors = [
   {name = "TRON - Translational Oncology at the University Medical Center of the Johannes Gutenberg University Mainz", email = "patrick.sorn@tron-mainz.de"},
 ]
@@ -15,13 +15,12 @@ maintainers = [
 ]
 description = 'Quantification of reads at defined positions to verify custom input sequences. Given a gene fusion or splicing junction of interest, this tool can quantify RNA-seq reads supporting the breakpoint (or splice junction) by quantifying reads that map to the breakpoint (junction reads) and read pairs that span the breakpoint (spanning pairs).'
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 classifiers = [
     'Development Status :: 4 - Beta',
     'Intended Audience :: Healthcare Industry',
     'Intended Audience :: Science/Research',
     'Topic :: Scientific/Engineering :: Bio-Informatics',
-    'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
