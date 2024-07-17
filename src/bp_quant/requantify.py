@@ -60,7 +60,7 @@ def get_seq_to_pos(seq_table_file):
             for i in range(len(pos_arr)-1):
                 interval_name = "{}_{}".format(pos_arr[i], pos_arr[i+1])
                 intervals.append((interval_name, int(pos_arr[i]), int(pos_arr[i+1])))
-            seq_to_pos[name] = intervals
+            seq_to_pos[name] = (intervals, ",".join([str(x) for x in pos_arr]))
 
     return seq_to_pos
 
@@ -129,6 +129,53 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
     return read_info
 
 
+def process_secondary_alignments(read_dict):
+    """
+    Process secondary alignments and classify the reads accordingly
+    """
+
+    read_pairings = []
+    #print(read_dict)
+    for key in read_dict:
+        #print(key)
+        for query_name in read_dict[key]:
+            r1_sec = None
+            r2_sec = None
+            #print(read_dict[key][query_name])
+            if not read_dict[key][query_name]["R2"]:
+                # Simulate R2
+                r2_sec = {
+                    "reference_name": key,
+                    "query_name": query_name,
+                    "unmapped": True,
+                    "flag": 389,
+                    "start": -1,
+                    "stop": -1,
+                    "pairs": None,
+                    "cigar": None
+                }
+            else:
+                r2_sec = read_dict[key][query_name]["R2"][0]
+            if not read_dict[key][query_name]["R1"]:
+                r1_sec = {
+                    "reference_name": key,
+                    "query_name": query_name,
+                    "unmapped": True,
+                    "flag": 325,
+                    "start": -1,
+                    "stop": -1,
+                    "pairs": None,
+                    "cigar": None
+                }
+            else:
+                r1_sec = read_dict[key][query_name]["R1"][0]
+                
+
+            if r1_sec and r2_sec:
+                #print("R1", r1_sec)
+                #print("R2", r2_sec)
+                read_pairings.append((r1_sec, r2_sec))
+    return read_pairings
 
 
 class Quantification(object):
@@ -143,7 +190,9 @@ class Quantification(object):
         self.reads_out.write(("\t".join([
             "name",
             "mate",
+            "flag",
             "reference",
+            "bp",
             "start",
             "end",
             "cigar",
@@ -204,6 +253,9 @@ class Quantification(object):
         logger.info("Starting quantification.".format(self.bam_file))
         bam = pysam.AlignmentFile(self.bam_file, "rb")
 
+        secondary_dict = {}
+        #for seq_name in self.seq_to_pos:
+        #    secondary_dict[seq_name] = {}
         missing_refs = {}
         r1 = None
         r2 = None
@@ -229,18 +281,47 @@ class Quantification(object):
             # Secondary alignments will be excluded from the matching process
             # and unmapped mates will be simulated as they are not reported
             # within the bowtie2 alignment
+            # Gather read information
+            qname = read.query_name
+            unmapped = read.is_unmapped
+            start = -1
+            stop = -1
+            pairs = None
+            if not unmapped:
+                start = read.reference_start
+                stop = read.reference_end
+                pairs = None
+                try:
+                    pairs = read.get_aligned_pairs(with_seq=True)
+                except:
+                    logger.error("Not possible to get read information. Skipping...")
+                    continue
+            read_dict = {
+                "query_name": qname,
+                "first_in_pair": read.is_read1,
+                "unmapped": unmapped,
+                "reference_name": read.reference_name,
+                "flag": read.flag,
+                "cigar": read.cigarstring,
+                "start": start,
+                "stop": stop,
+                "pairs": pairs
+            }
             if read.is_secondary and self.aligner == "bowtie2":
-                r1_sec = read
-                r2_sec = pysam.AlignedSegment(bam.header)
-                r2_sec.reference_name = r1_sec.reference_name
-                r2_sec.query_name = r1_sec.query_name
-                r2_sec.is_unmapped = True
-                self.quantify(r1_sec, r2_sec)
+                if read.reference_name not in secondary_dict:
+                    secondary_dict[read.reference_name] = {}
+                if read.query_name not in secondary_dict[read.reference_name]:
+                    secondary_dict[read.reference_name][read.query_name] = {"R1": [], "R2": []}
+                
+                if read_dict["first_in_pair"]:
+                    secondary_dict[read.reference_name][read.query_name]["R1"].append(read_dict)
+                else:
+                    secondary_dict[read.reference_name][read.query_name]["R2"].append(read_dict)
             else:
                 if not r1:
-                    r1 = read
+                    r1 = read_dict
                 elif r1 and not r2:
-                    r2 = read
+                    r2 = read_dict
                 
 
             if r1 and r2:
@@ -248,22 +329,26 @@ class Quantification(object):
                 # with unmatching reference or read name
                 # TODO: Check if unmapped reference is '*'
                 # and therefore needs more relaxed clause
-                if not (r1.is_unmapped and r2.is_unmapped or
-                    r1.query_name != r2.query_name):
-                    if (r1.reference_name == r2.reference_name or
-                        r1.is_unmapped and not r2.is_unmapped or
-                        not r1.is_unmapped and r2.is_unmapped):
+                if not (r1["unmapped"] and r2["unmapped"] or
+                    r1["query_name"] != r2["query_name"]):
+                    if (r1["reference_name"] == r2["reference_name"] or
+                        r1["unmapped"] and not r2["unmapped"] or
+                        not r1["unmapped"] and r2["unmapped"]):
                         self.quantify(r1, r2)
-                elif r1.query_name != r2.query_name:
+                elif r1["query_name"] != r2["query_name"]:
                     print("MISMATCHING QUERY NAME!", r1, r2)
                     break
                 r1 = None
                 r2 = None
+        # Process secondary alignments individually
+        read_pairings = process_secondary_alignments(secondary_dict)
+        for r1, r2 in read_pairings:
+            self.quantify(r1, r2)
         logger.info("Quantification done.")
 
         if self.interval_mode:
             for seq_name in self.seq_to_pos:
-                for interval_name, ref_start, ref_stop in self.seq_to_pos[seq_name]:
+                for interval_name, ref_start, ref_stop in self.seq_to_pos[seq_name][0]:
                     cov_perc = perc_true(self.cov_dict[seq_name][interval_name].values())
                     cov_mean = mean(self.cov_dict[seq_name][interval_name].values())
                     cov_median = median(self.cov_dict[seq_name][interval_name].values())
@@ -292,9 +377,10 @@ class Quantification(object):
           2 within_interval reads that map completely within the interval or softjunctions
         """
 
-        read_name = r1.query_name
-        seq_name = r1.reference_name
-        
+        read_name = r1["query_name"]
+        seq_name = r1["reference_name"]
+        r1_flag = r1["flag"]
+        r2_flag = r2["flag"]
         
         if seq_name not in self.seq_to_pos:
             return
@@ -303,45 +389,27 @@ class Quantification(object):
         right_interval = None
 
         if not self.interval_mode:
-            left_interval = self.seq_to_pos[seq_name][0][0]
-            right_interval = self.seq_to_pos[seq_name][1][0]
+            left_interval = self.seq_to_pos[seq_name][0][0][0]
+            right_interval = self.seq_to_pos[seq_name][0][1][0]
 
 
-        r1_start = -1
-        r1_stop = -1
-        r1_pairs = None
-        if not r1.is_unmapped:
-            r1_start = r1.reference_start
-            r1_stop = r1.reference_end
-            r1_pairs = None
-            try:
-                r1_pairs = r1.get_aligned_pairs(with_seq=True)
-            except:
-                logger.error("Not possible to get read information. Skipping...")
-                return
+        r1_start = r1["start"]
+        r1_stop = r1["stop"]
+        r1_pairs = r1["pairs"]
 
-        r2_start = -1
-        r2_stop = -1
-        r2_pairs = None
-        if not r2.is_unmapped:
-            r2_start = r2.reference_start
-            r2_stop = r2.reference_end
-            r2_pairs = None
-            try:
-                r2_pairs = r2.get_aligned_pairs(with_seq=True)
-            except:
-                logger.error("Not possible to get read information. Skipping...")
-                return
+        r2_start = r2["start"]
+        r2_stop = r2["stop"]
+        r2_pairs = r2["pairs"]
 
-        r1_cigar = r1.cigarstring
-        r2_cigar = r2.cigarstring
+        r1_cigar = r1["cigar"]
+        r2_cigar = r2["cigar"]
 
         # Get read information [junc, within, interval]
         r1_info = classify_read(
             aln_start=r1_start,
             aln_stop=r1_stop,
             aln_pairs=r1_pairs,
-            intervals=self.seq_to_pos[seq_name],
+            intervals=self.seq_to_pos[seq_name][0],
             allow_mismatches=self.allow_mismatches,
             bp_dist=self.bp_dist
         )
@@ -349,7 +417,7 @@ class Quantification(object):
             aln_start=r2_start,
             aln_stop=r2_stop,
             aln_pairs=r2_pairs,
-            intervals=self.seq_to_pos[seq_name],
+            intervals=self.seq_to_pos[seq_name][0],
             allow_mismatches=self.allow_mismatches,
             bp_dist=self.bp_dist
         )
@@ -420,7 +488,7 @@ class Quantification(object):
 
                 start = False
                 spanning_intervals = []
-                for interval_name, ref_start, ref_stop in self.seq_to_pos[seq_name]:
+                for interval_name, ref_start, ref_stop in self.seq_to_pos[seq_name][0]:
                     if interval_name == r1_info["interval"] or interval_name == r2_info["interval"]:
                         if not start:
                             start = True
@@ -429,29 +497,30 @@ class Quantification(object):
                     if start:
                         spanning_intervals.append(interval_name)
                 for interval_name in spanning_intervals:
-                    self.counts[seq_name][interval_name][1] += 1                        
+                    self.counts[seq_name][interval_name][1] += 1
             else:
                 self.counts[seq_name][1] += 1
             r1_type = "span"
             r2_type = "span"
 
-        if not r1_type:
-            r1_type = "softjunc"
-        if not r2_type:
-            r2_type = "softjunc"
+        if r1["unmapped"]:
+            r1_type = "unmapped"
+        if r2["unmapped"]:
+            r2_type = "unmapped"
         # Get mismatch information
         r1_nm = r1_info["nm"]
         r2_nm = r2_info["nm"]
         r1_nm_junc = r1_info["nm_in_bp_area"]
         r2_nm_junc = r2_info["nm_in_bp_area"]
+        bp = self.seq_to_pos[seq_name][1]
         self.reads_out.write(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                read_name, "R1", seq_name, r1_start, r1_stop, r1_cigar, r1_nm, r1_nm_junc, r1_type
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                read_name, "R1", r1_flag, seq_name, bp, r1_start, r1_stop, r1_cigar, r1_nm, r1_nm_junc, r1_type
             ).encode()
         )
         self.reads_out.write(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                read_name, "R2", seq_name, r2_start, r2_stop, r2_cigar, r2_nm, r2_nm_junc, r2_type
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                read_name, "R2", r2_flag, seq_name, bp, r2_start, r2_stop, r2_cigar, r2_nm, r2_nm_junc, r2_type
             ).encode()
         )
 
@@ -502,7 +571,7 @@ class Quantification(object):
                         out_line = "\t".join(sp_out) + "\n"
                         out_handle.write(out_line)
                 else:
-                    position = str(self.seq_to_pos[name][0][2])
+                    position = str(self.seq_to_pos[name][0][0][2])
                     # drop sequence and construct output columns
                     sp_out = [name, position] + [str(c) for c in seq_counts]
                     

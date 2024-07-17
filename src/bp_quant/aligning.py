@@ -3,7 +3,7 @@ import subprocess
 def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params):
     cmd=""
     if fq1 and fq2:
-        cmd = "bowtie2 -p {0} -x {1}/bowtie -a --end-to-end -1 {2} -2 {3} -S {4}/Aligned.out.sam {5}".format(
+        cmd = "bowtie2 -p {0} -x {1}/bowtie -a --end-to-end --no-discordant -1 {2} -2 {3} -S {4}/Aligned.out.sam {5}".format(
             num_threads,
             index_dir,
             fq1,
@@ -12,7 +12,7 @@ def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom
             custom_params
         )
     elif not fq1 and not fq2 and bam:
-        cmd = "bowtie2 -p {0} -x {1}/bowtie -a --end-to-end -b {2} --align-paired-reads -S {3}/Aligned.out.sam {4}".format(
+        cmd = "bowtie2 -p {0} -x {1}/bowtie -a --end-to-end --no-discordant -b {2} --align-paired-reads -S {3}/Aligned.out.sam {4}".format(
             num_threads,
             index_dir,
             bam,
