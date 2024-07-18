@@ -102,12 +102,15 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
             match_list_junc = [s in MATCH_BASES for s in aln_seq_junc]
             no_snp = all(match_list_junc)
             num_mismatches_junc = match_list_junc.count(False)
-            
+            read_info["nm_in_bp_area"] = num_mismatches_junc
             if (no_ins_or_del and no_snp) or allow_mismatches:
                 read_info["junc"] = True
                 read_info["interval"] = interval_name
-                read_info["nm_in_bp_area"] = num_mismatches_junc
         if aln_start <= ref_stop and aln_stop >= ref_stop:
+            # What will happen if multiple BPs with small distance to each other are present?
+            # e.g. if a read spans multiple BPs, which anchor will be used?
+            # Suggestion: Take the largest anchor among BPs for a read
+            # or sum them up
             anchor = min(aln_stop - ref_stop, ref_stop - aln_start)
             read_info["anchor"] = anchor
         
