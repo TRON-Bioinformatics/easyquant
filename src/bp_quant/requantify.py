@@ -78,7 +78,6 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
     MATCH_BASES = ['A', 'C', 'G', 'T']
 
     read_info = {"junc": False, "within": False, "interval": "", "anchor": 0, "nm": 0, "nm_in_bp_area": 0}
-
     for (interval_name, ref_start, ref_stop) in intervals:
         # Check if read spans ref start
         if aln_start <= ref_stop - bp_dist and aln_stop >= ref_stop + bp_dist:
@@ -105,13 +104,13 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
             num_mismatches_junc = match_list_junc.count(False)
             
             if (no_ins_or_del and no_snp) or allow_mismatches:
-                anchor = min(aln_stop - ref_stop, ref_stop - aln_start)
                 read_info["junc"] = True
-                read_info["anchor"] = anchor
                 read_info["interval"] = interval_name
-                
                 read_info["nm_in_bp_area"] = num_mismatches_junc
-
+        if aln_start <= ref_stop and aln_stop >= ref_stop:
+            anchor = min(aln_stop - ref_stop, ref_stop - aln_start)
+            read_info["anchor"] = anchor
+        
         if aln_pairs:
             aln_seq = [s for (q, r, s) in aln_pairs if r is not None]
             match_list = [s in MATCH_BASES for s in aln_seq]
@@ -121,11 +120,9 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
         read_info["nm"] = num_mismatches
 
         # read maps completely within the interval
-        #if aln_start > ref_start - bp_dist and aln_stop < ref_stop + bp_dist:
         if aln_start >= ref_start and aln_stop <= ref_stop:
             read_info["within"] = True
             read_info["interval"] = interval_name
-
     return read_info
 
 
@@ -143,29 +140,36 @@ def process_secondary_alignments(read_dict):
                 len(read_dict[key][query_name]["R2"])
             )
             for i in range(num_read_pairs):
+                r1_sec = None
+                r2_sec = None
                 # Get i-th element of R1 reads, otherwise simulate R2
-                r1_sec = read_dict[key][query_name]["R1"].get(i, {
-                    "reference_name": key,
-                    "query_name": query_name,
-                    "unmapped": True,
-                    "flag": 325,
-                    "start": -1,
-                    "stop": -1,
-                    "pairs": None,
-                    "cigar": None
-                })
+                try:
+                    r1_sec = read_dict[key][query_name]["R1"][i]
+                except:
+                    r1_sec = {
+                        "reference_name": key,
+                        "query_name": query_name,
+                        "unmapped": True,
+                        "flag": 325,
+                        "start": -1,
+                        "stop": -1,
+                        "pairs": None,
+                        "cigar": None
+                    }
                 # Get i-th element of R2 reads, otherwise simulate R2
-                r2_sec = read_dict[key][query_name]["R2"].get(i, {
-                    "reference_name": key,
-                    "query_name": query_name,
-                    "unmapped": True,
-                    "flag": 389,
-                    "start": -1,
-                    "stop": -1,
-                    "pairs": None,
-                    "cigar": None
-                })
-                
+                try:
+                    r2_sec = read_dict[key][query_name]["R2"][i] 
+                except:
+                    r2_sec = {
+                        "reference_name": key,
+                        "query_name": query_name,
+                        "unmapped": True,
+                        "flag": 389,
+                        "start": -1,
+                        "stop": -1,
+                        "pairs": None,
+                        "cigar": None
+                    }
                 if r1_sec and r2_sec:
                     read_pairings.append((r1_sec, r2_sec))
     return read_pairings
@@ -502,6 +506,11 @@ class Quantification(object):
             r1_type = "unmapped"
         if r2["unmapped"]:
             r2_type = "unmapped"
+
+        if 0 < r1_info["anchor"] <= self.bp_dist:
+            r1_type = "softjunc"
+        if 0 < r2_info["anchor"] <= self.bp_dist:
+            r2_type = "softjunc"
         # Get mismatch information
         r1_nm = r1_info["nm"]
         r2_nm = r2_info["nm"]
