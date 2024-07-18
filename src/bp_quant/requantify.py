@@ -135,29 +135,16 @@ def process_secondary_alignments(read_dict):
     """
 
     read_pairings = []
-    #print(read_dict)
     for key in read_dict:
-        #print(key)
         for query_name in read_dict[key]:
-            r1_sec = None
-            r2_sec = None
-            #print(read_dict[key][query_name])
-            if not read_dict[key][query_name]["R2"]:
-                # Simulate R2
-                r2_sec = {
-                    "reference_name": key,
-                    "query_name": query_name,
-                    "unmapped": True,
-                    "flag": 389,
-                    "start": -1,
-                    "stop": -1,
-                    "pairs": None,
-                    "cigar": None
-                }
-            else:
-                r2_sec = read_dict[key][query_name]["R2"][0]
-            if not read_dict[key][query_name]["R1"]:
-                r1_sec = {
+            # Get every read pairing for the query name
+            num_read_pairs = max(
+                len(read_dict[key][query_name]["R1"]), 
+                len(read_dict[key][query_name]["R2"])
+            )
+            for i in range(num_read_pairs):
+                # Get i-th element of R1 reads, otherwise simulate R2
+                r1_sec = read_dict[key][query_name]["R1"].get(i, {
                     "reference_name": key,
                     "query_name": query_name,
                     "unmapped": True,
@@ -166,15 +153,21 @@ def process_secondary_alignments(read_dict):
                     "stop": -1,
                     "pairs": None,
                     "cigar": None
-                }
-            else:
-                r1_sec = read_dict[key][query_name]["R1"][0]
+                })
+                # Get i-th element of R2 reads, otherwise simulate R2
+                r2_sec = read_dict[key][query_name]["R2"].get(i, {
+                    "reference_name": key,
+                    "query_name": query_name,
+                    "unmapped": True,
+                    "flag": 389,
+                    "start": -1,
+                    "stop": -1,
+                    "pairs": None,
+                    "cigar": None
+                })
                 
-
-            if r1_sec and r2_sec:
-                #print("R1", r1_sec)
-                #print("R2", r2_sec)
-                read_pairings.append((r1_sec, r2_sec))
+                if r1_sec and r2_sec:
+                    read_pairings.append((r1_sec, r2_sec))
     return read_pairings
 
 
@@ -223,7 +216,7 @@ class Quantification(object):
             if self.interval_mode:
                 counts[seq_name] = {}
                 cov_dict[seq_name] = {}
-                for interval_name, ref_start, ref_stop in seq_to_pos[seq_name]:
+                for interval_name, ref_start, ref_stop in seq_to_pos[seq_name][0]:
                     # junc, span_read, within, coverage_%, coverage_mean, coverage_median
                     counts[seq_name][interval_name] = [0, 0, 0, 0, 0, 0]
 
@@ -308,6 +301,8 @@ class Quantification(object):
                 "pairs": pairs
             }
             if read.is_secondary and self.aligner == "bowtie2":
+                # Create dictionary for secondary alignments from bowtie2 
+                # to bring them into a format that can be processed
                 if read.reference_name not in secondary_dict:
                     secondary_dict[read.reference_name] = {}
                 if read.query_name not in secondary_dict[read.reference_name]:
