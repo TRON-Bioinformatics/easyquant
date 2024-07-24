@@ -23,6 +23,13 @@ def get_aligner(bam_file):
     aligner = header_dict["PG"][0]["ID"].lower()
     return aligner
 
+def get_sorting(bam_file):
+    """
+    Use pysam to grep SO from SAM header and check sorting of input file
+    """
+    header_dict = pysam.AlignmentFile(bam_file, "rb").header.to_dict()
+    sorting = header_dict['HD']['SO']
+    return sorting
 
 def perc_true(lst):
     n = len(lst)
@@ -183,6 +190,7 @@ class Quantification(object):
         self.seq_table_file = seq_table_file
         self.bam_file = bam_file
         self.aligner = get_aligner(bam_file)
+        self.sorting = get_sorting(bam_file)
         self.output_path = os.path.abspath(output_path)
         self.quant_file = os.path.join(output_path, "quantification.tsv")
         self.reads_file = os.path.join(output_path, "read_info.tsv.gz")
@@ -209,6 +217,9 @@ class Quantification(object):
         self.reads_out.close()
         self.write_results()
 
+        if not self.sorting in ['unsorted', 'queryname']:
+            logger.error('Requantification requires queryname sorted SAM file.')
+            sys.exit(1)
 
     def init_counts(self, seq_to_pos):
         """
@@ -241,33 +252,14 @@ class Quantification(object):
 
         return counts, cov_dict
 
-
-    def parse_alignment(self):
+    def process_reads(self, all_alignments_of_query_name):
         """
-        Parses alignment and iterates over each read while quantifying it.
+        Process and quantify all alignments of read pair
         """
-
-        # TODO: Implement method to parse BAM files using mate information
-
-        logger.info("Reading alignment file (path={}).".format(self.bam_file))
-        logger.info("Starting quantification.".format(self.bam_file))
-        bam = pysam.AlignmentFile(self.bam_file, "rb")
-
         secondary_dict = {}
-        #for seq_name in self.seq_to_pos:
-        #    secondary_dict[seq_name] = {}
-        missing_refs = {}
         r1 = None
         r2 = None
-        for read in bam.fetch():
-            if read.flag > 511:
-                continue
-            # Handle missing reference sequences which occur in SAM/BAM
-            # but not in seq_table.csv
-            if read.reference_name and read.reference_name not in self.seq_to_pos:
-                if read.reference_name not in missing_refs:
-                    missing_refs[read.reference_name] = 0
-                missing_refs[read.reference_name] += 1
+        for read in all_alignments_of_query_name:
             # Bowtie reports alignments in the following order,
             # therefore the following if statement prevents
             # mismatching issues for read pairs where
@@ -346,6 +338,50 @@ class Quantification(object):
         read_pairings = process_secondary_alignments(secondary_dict)
         for r1, r2 in read_pairings:
             self.quantify(r1, r2)
+
+
+    def parse_alignment(self):
+        """
+        Parses alignment and iterates over each read while quantifying it.
+        """
+
+        # TODO: Implement method to parse BAM files using mate information
+
+        logger.info("Reading alignment file (path={}).".format(self.bam_file))
+        logger.info("Starting quantification.".format(self.bam_file))
+        bam = pysam.AlignmentFile(self.bam_file, "rb")
+
+        missing_refs = {}
+        all_alignments_of_query_name = []
+        current_query_name = None
+        for read in bam.fetch():
+            # Skip alignments with following SAM flags:
+            # * read fails platform/vendor quality checks (0x200)
+            # * read is PCR or optical duplicate (0x400)
+            # * supplementary alignment (0x800)
+            if read.flag > 511:
+                continue
+            # Handle missing reference sequences which occur in SAM/BAM
+            # but not in seq_table.csv
+            if read.reference_name and read.reference_name not in self.seq_to_pos:
+                if read.reference_name not in missing_refs:
+                    missing_refs[read.reference_name] = 0
+                missing_refs[read.reference_name] += 1
+            # Collect all alignments with the same queryname (same read pair) 
+            # into chunk and process together before moving to the next read chunk
+            if current_query_name is None:
+                current_query_name = read.query_name
+            
+            if read.query_name == current_query_name:
+                all_alignments_of_query_name.append(read)
+            else:
+                self.process_reads(all_alignments_of_query_name)
+                current_query_name = read.query_name
+                all_alignments_of_query_name = [read, ]
+        # Explicitly call the processing for the last read chunk after the loop
+        if all_alignments_of_query_name:
+            self.process_reads(all_alignments_of_query_name)
+            
         logger.info("Quantification done.")
 
         if self.interval_mode:
