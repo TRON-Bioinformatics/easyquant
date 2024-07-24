@@ -28,7 +28,7 @@ def get_sorting(bam_file):
     Use pysam to grep SO from SAM header and check sorting of input file
     """
     header_dict = pysam.AlignmentFile(bam_file, "rb").header.to_dict()
-    sorting = header_dict['HD']['SO']
+    sorting = header_dict['HD'].get('SO', 'unsorted')
     return sorting
 
 def perc_true(lst):
@@ -312,9 +312,10 @@ class Quantification(object):
                 else:
                     secondary_dict[read.reference_name][read.query_name]["R2"].append(read_dict)
             else:
-                if not r1:
+                # Determine if alignment record comes from R1 or R2
+                if read.is_read1:
                     r1 = read_dict
-                elif r1 and not r2:
+                else:
                     r2 = read_dict
                 
 
