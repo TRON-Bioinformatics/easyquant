@@ -53,7 +53,7 @@ pip install dist/*.whl
 
 ```
 usage: bp_quant pipeline [-h] [-1 FQ1] [-2 FQ2] [-b BAM] -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
-                         [--interval_mode] [-m {star,bowtie2,bwa}] [-t NUM_THREADS] [--alignment_params ALIGN_PARAMS]
+                         [--interval_mode] [-m {star,bowtie2}] [-t NUM_THREADS] [--alignment_params ALIGN_PARAMS]
                          [--keep_aln | --keep_all]
 
 Runs the complete bpquant pipeline
@@ -73,7 +73,7 @@ optional arguments:
                         junction/spanning read counting
   --allow_mismatches    Allow mismatches within the region around the breakpoint determined by the bp_distance parameter
   --interval_mode       Specify if interval mode shall be used
-  -m {star,bowtie2,bwa}, --method {star,bowtie2,bwa}
+  -m {star,bowtie2}, --method {star,bowtie2}
                         Specify alignment software to generate the index
   -t NUM_THREADS, --threads NUM_THREADS
                         Specify number of threads to use for the alignment

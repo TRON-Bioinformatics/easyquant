@@ -29,7 +29,7 @@ def __get_read_count_bam(bam_file):
 
 class Pipeline(object):
     
-    def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode, keep_aln, keep_all):
+    def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode, skip_singleton,´keep_aln, keep_all):
 
         self.working_dir = os.path.abspath(working_dir)
         self.module_dir = os.path.dirname(os.path.realpath(__file__))
@@ -61,6 +61,7 @@ class Pipeline(object):
         self.interval_mode = interval_mode
         self.keep_aln = keep_aln
         self.keep_all = keep_all
+        self.skip_singleton = skip_singleton
 
         
     def run(self, method, num_threads, align_cmd_params):
@@ -86,6 +87,8 @@ class Pipeline(object):
                 outf.write("--interval_mode \\\n")
             if self.allow_mismatches:
                 outf.write("--allow_mismatches \\\n")
+            if self.keep_singleton:
+                outf.write("--skip_singleton \\\n")
             if align_cmd_params:
                 outf.write(align_cmd_params)
 
@@ -97,12 +100,8 @@ class Pipeline(object):
         elif self.bam:
             logging.info("BAM={}".format(self.bam))
 
-        genome_path = None
-        if method == "bwa":
-            genome_path = os.path.join(self.working_dir, "context.fa")
-        else:
-            genome_path = os.path.join(self.working_dir, "index")
-            IOMethods.create_folder(genome_path)
+        genome_path = os.path.join(self.working_dir, "index")
+        IOMethods.create_folder(genome_path)
         align_path = os.path.join(self.working_dir, "alignment")
 
         fasta_file = os.path.join(self.working_dir, "context.fa")
@@ -182,19 +181,8 @@ class Pipeline(object):
                 method,
                 custom_params
             )
-            
 
-        if method == "bwa":
-            # Add index files from bwa
-            clean_up_files.extend([
-                "{}.amb".format(fasta_file),
-                "{}.ann".format(fasta_file),
-                "{}.bwt".format(fasta_file),
-                "{}.pac".format(fasta_file),
-                "{}.sa".format(fasta_file)
-            ])
-
-        elif method == "star":
+        if method == "star":
             clean_up_files.extend([
                 "{}/Log.progress.out".format(align_path),
                 "{}/SJ.out.tab".format(align_path),
@@ -211,10 +199,13 @@ class Pipeline(object):
 
         allow_mismatches_str = ""
         interval_mode_str = ""
+        skip_singleton_str = ""
         if self.allow_mismatches:
             allow_mismatches_str = " --allow_mismatches"
         if self.interval_mode:
             interval_mode_str = " --interval_mode"
+        if self.skip_singleton:
+            skip_singleton_str = " --skip_singleton"
 
         quant_cmd = "bp_quant count \
         -i {0} \
@@ -226,7 +217,8 @@ class Pipeline(object):
             self.bp_distance,
             self.working_dir,
             allow_mismatches_str,
-            interval_mode_str
+            interval_mode_str,
+            skip_singleton_str
         )
 
         clean_cmd = "for file in {}; \
@@ -333,10 +325,17 @@ def add_pipeline_args(parser):
         help="Specify if interval mode shall be used"
     )
     parser.add_argument(
+        "--skip_singleton",
+        dest="skip_singleton",
+        action="store_true",
+        help="Skip singleton alignments in requantification"
+    )
+    parser.set_defaults(func=requantify_command)
+    parser.add_argument(
         "-m",
         "--method",
         dest="method",
-        choices=["star", "bowtie2", "bwa"],
+        choices=["star", "bowtie2"],
         help="Specify alignment software to generate the index",
         default="star"
     )
@@ -380,6 +379,7 @@ def pipeline_command(args):
         working_dir=args.output_folder,
         allow_mismatches=args.allow_mismatches,
         interval_mode=args.interval_mode,
+        skip_singleton=args.skip_singleton,
         keep_aln=args.keep_aln,
         keep_all=args.keep_all
     )

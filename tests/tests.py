@@ -7,7 +7,9 @@ import pysam
 SEQ_TABLE_FILE = os.path.join("example_data", "CLDN18_Context_seq.csv")
 BAM_FILE = os.path.join("example_data", "example_rna-seq.bam")
 
-from bp_quant.requantify import Quantification, process_secondary_alignments, get_aligner, perc_true, get_seq_to_pos, classify_read, is_chimeric_alignment
+from bp_quant.requantify import Quantification, process_secondary_alignments, 
+                                get_aligner, perc_true, get_seq_to_pos, classify_read,
+                                is_chimeric_alignment, is_singleton,
 
 
 class TestRequantify(unittest.TestCase):
@@ -47,6 +49,26 @@ class TestRequantify(unittest.TestCase):
         read.reference_start = 32
         read.next_reference_id = 3
         self.assertFalse(is_chimeric_alignment(read))
+
+    def test_is_singleton(self):
+        
+        # Check that aligned read with unmapped mapped is identified as valid alignment
+        read = pysam.AlignedSegment()
+        read.query_name = "read_28833_29006_6945"
+        read.flag = 105
+        read.reference_id = 0
+        read.reference_start = 32
+        read.next_reference_id = -1
+        self.assertTrue(is_singleton(read))
+
+        # Check that unaligned read with mapped mate is identified as valid alignment
+        read = pysam.AlignedSegment()
+        read.query_name = "read_28833_29006_6945"
+        read.flag = 101
+        read.reference_id = -1
+        read.reference_start = 32
+        read.next_reference_id = 3
+        self.True(is_singleton(read))
 
     def test_process_secondary_alignments(self):
         read_dict = {
