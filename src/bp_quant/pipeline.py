@@ -330,7 +330,6 @@ def add_pipeline_args(parser):
         action="store_true",
         help="Skip singleton alignments in requantification"
     )
-    parser.set_defaults(func=requantify_command)
     parser.add_argument(
         "-m",
         "--method",
