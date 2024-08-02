@@ -87,7 +87,7 @@ class Pipeline(object):
                 outf.write("--interval_mode \\\n")
             if self.allow_mismatches:
                 outf.write("--allow_mismatches \\\n")
-            if self.keep_singleton:
+            if self.skip_singleton:
                 outf.write("--skip_singleton \\\n")
             if align_cmd_params:
                 outf.write(align_cmd_params)
