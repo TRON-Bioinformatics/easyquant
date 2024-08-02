@@ -68,7 +68,7 @@ class TestRequantify(unittest.TestCase):
         read.reference_id = -1
         read.reference_start = 32
         read.next_reference_id = 3
-        self.True(is_singleton(read))
+        self.assertTrue(is_singleton(read))
 
     def test_process_secondary_alignments(self):
         read_dict = {
