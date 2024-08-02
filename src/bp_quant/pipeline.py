@@ -29,7 +29,7 @@ def __get_read_count_bam(bam_file):
 
 class Pipeline(object):
     
-    def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode, skip_singleton,´keep_aln, keep_all):
+    def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode, skip_singleton, keep_aln, keep_all):
 
         self.working_dir = os.path.abspath(working_dir)
         self.module_dir = os.path.dirname(os.path.realpath(__file__))
