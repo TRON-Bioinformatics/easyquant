@@ -7,9 +7,7 @@ import pysam
 SEQ_TABLE_FILE = os.path.join("example_data", "CLDN18_Context_seq.csv")
 BAM_FILE = os.path.join("example_data", "example_rna-seq.bam")
 
-from bp_quant.requantify import Quantification, process_secondary_alignments,
-                                get_aligner, perc_true, get_seq_to_pos, classify_read,
-                                is_chimeric_alignment, is_singleton
+from bp_quant.requantify import Quantification, process_secondary_alignments, get_aligner, perc_true, get_seq_to_pos, classify_read, is_chimeric_alignment, is_singleton
 
 
 class TestRequantify(unittest.TestCase):
