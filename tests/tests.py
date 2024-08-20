@@ -266,8 +266,8 @@ class TestRequantify(unittest.TestCase):
             ('0_400', 0, 400),
             ('400_786', 400, 786)
         ]
-        result = {"junc": True, "within": False, "interval": "0_400", "anchor": 15, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
-        self.assertEqual(classify_read(365, 415, aln_pairs, interval, True, 10), result)
+        result = {"class": "junc", "interval": "0_400", "anchor": 15, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
+        self.assertEqual(classify_read(365, 415, aln_pairs, interval, 10), result)
 
 
         aln_pairs = [(0, 609, 'C'), (1, 610, 'T'), (2, 611, 'C'), (3, 612, 'A'), (4, 613, 'C'), (5, 614, 'C'), (6, 615, 'C'), (7, 616, 'A'), (8, 617, 'A'), (9, 618, 'A'), (10, 619, 'A'), (11, 620, 'A'), (12, 621, 'A'), (13, None, None), (14, 622, 'C'), (15, 623, 'A'), (16, 624, 'A'), (17, 625, 'G'), (18, 626, 'G'), (19, 627, 'A'), (20, 628, 'G'), (21, 629, 'A'), (22, 630, 'T'), (23, 631, 'C'), (24, 632, 'C'), (25, 633, 'C'), (26, 634, 'A'), (27, 635, 'T'), (28, 636, 'C'), (29, 637, 'T'), (30, 638, 'A'), (31, 639, 'G'), (32, 640, 'A'), (33, 641, 'T'), (34, 642, 'T'), (35, 643, 'T'), (36, 644, 'C'), (37, 645, 'T'), (38, 646, 'T'), (39, 647, 'C'), (40, 648, 'T'), (41, 649, 'T'), (42, 650, 'G'), (43, 651, 'C'), (44, 652, 'T'), (45, 653, 'T'), (46, 654, 'T'), (47, 655, 'T'), (48, 656, 'G'), (49, 657, 'A'), (50, 658, 'C')]
@@ -276,8 +276,8 @@ class TestRequantify(unittest.TestCase):
             ('0_400', 0, 400),
             ('400_786', 400, 786)
         ]
-        result = {"junc": False, "within": True, "interval": "400_786", "anchor": 0, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
-        self.assertEqual(classify_read(609, 658, aln_pairs, interval, True, 10), result)
+        result = {"class": "within", "interval": "400_786", "anchor": 0, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
+        self.assertEqual(classify_read(609, 658, aln_pairs, interval, 10), result)
 
         aln_pairs = [
             (0, 172, 'A'),
@@ -336,8 +336,8 @@ class TestRequantify(unittest.TestCase):
             ('0_200', 0, 200),
             ('200_400', 200, 400)
         ]
-        result = {"junc": True, "interval": "0_200", "within": False, "anchor": 22, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
-        self.assertEqual(classify_read(172, 222, aln_pairs, interval, True, 10), result)
+        result = {"class": "junc", "interval": "0_200", "anchor": 22, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
+        self.assertEqual(classify_read(172, 222, aln_pairs, interval, 10), result)
         
     def test_classify_softjunc(self):
         aln_pairs = [(0, 609, 'C'), (1, 610, 'T'), (2, 611, 'C'), (3, 612, 'A'), (4, 613, 'C'), (5, 614, 'C'), (6, 615, 'C'), (7, 616, 'A'), (8, 617, 'A'), (9, 618, 'A'), (10, 619, 'A'), (11, 620, 'A'), (12, 621, 'A'), (13, None, None), (14, 622, 'C'), (15, 623, 'A'), (16, 624, 'A'), (17, 625, 'G'), (18, 626, 'G'), (19, 627, 'A'), (20, 628, 'G'), (21, 629, 'A'), (22, 630, 'T'), (23, 631, 'C'), (24, 632, 'C'), (25, 633, 'C'), (26, 634, 'A'), (27, 635, 'T'), (28, 636, 'C'), (29, 637, 'T'), (30, 638, 'A'), (31, 639, 'G'), (32, 640, 'A'), (33, 641, 'T'), (34, 642, 'T'), (35, 643, 'T'), (36, 644, 'C'), (37, 645, 'T'), (38, 646, 'T'), (39, 647, 'C'), (40, 648, 'T'), (41, 649, 'T'), (42, 650, 'G'), (43, 651, 'C'), (44, 652, 'T'), (45, 653, 'T'), (46, 654, 'T'), (47, 655, 'T'), (48, 656, 'G'), (49, 657, 'A'), (50, 658, 'C')]
@@ -346,8 +346,8 @@ class TestRequantify(unittest.TestCase):
             ('0_400', 0, 400),
             ('400_786', 400, 786)
         ]
-        result = {"junc": False, "within": False, "interval": "", "anchor": 7, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
-        self.assertEqual(classify_read(393, 444, aln_pairs, interval, True, 10), result)
+        result = {"class": "softjunc", "interval": "", "anchor": 7, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
+        self.assertEqual(classify_read(393, 444, aln_pairs, interval, 10), result)
 
     def test_classify_snp_or_indel(self):
         aln_pairs = [
@@ -370,8 +370,7 @@ class TestRequantify(unittest.TestCase):
         ]
 
         result = {
-            "junc": True,
-            "within": False,
+            "class": "junc",
             "interval": '0_10',
             "anchor": 4,
             "nm": 0,
@@ -379,7 +378,7 @@ class TestRequantify(unittest.TestCase):
             "contains_snp_or_indel": True
         }
 
-        self.assertEqual(classify_read(5, 14, aln_pairs, interval, True, 4), result)
+        self.assertEqual(classify_read(5, 14, aln_pairs, interval, 3), result)
 
 
 if __name__ == "__main__":
