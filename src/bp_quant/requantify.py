@@ -539,7 +539,7 @@ class Quantification(object):
 
             # Check if reads are junction reads
             if r1_info["class"] == "junc":
-                if (r1_info["nm_in_bp_area"] == 0 and not r1_info["contains_snp_or_indel"]) or self.allow_mismatches:
+                if not r1_info["contains_snp_or_indel"] or self.allow_mismatches:
                     if self.interval_mode:
                         self.counts[seq_name][interval_name][0] += 1
                     else:
@@ -565,7 +565,7 @@ class Quantification(object):
 
 
             if r2_info["class"] == "junc":
-                if (r2_info["nm_in_bp_area"] == 0 and not r2_info["contains_snp_or_indel"]) or self.allow_mismatches:
+                if not r2_info["contains_snp_or_indel"] or self.allow_mismatches:
                     if self.interval_mode:
                         self.counts[seq_name][interval_name][0] += 1
                     else:
