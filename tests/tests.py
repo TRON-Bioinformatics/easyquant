@@ -266,7 +266,7 @@ class TestRequantify(unittest.TestCase):
             ('0_400', 0, 400),
             ('400_786', 400, 786)
         ]
-        result = {"junc": True, "within": False, "interval": "0_400", "anchor": 15, "nm": 0, "nm_in_bp_area": 0}
+        result = {"junc": True, "within": False, "interval": "0_400", "anchor": 15, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
         self.assertEqual(classify_read(365, 415, aln_pairs, interval, True, 10), result)
 
 
@@ -276,9 +276,8 @@ class TestRequantify(unittest.TestCase):
             ('0_400', 0, 400),
             ('400_786', 400, 786)
         ]
-        result = {"junc": False, "within": True, "interval": "400_786", "anchor": 0, "nm": 0, "nm_in_bp_area": 0}
+        result = {"junc": False, "within": True, "interval": "400_786", "anchor": 0, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
         self.assertEqual(classify_read(609, 658, aln_pairs, interval, True, 10), result)
-
 
         aln_pairs = [
             (0, 172, 'A'),
@@ -337,7 +336,7 @@ class TestRequantify(unittest.TestCase):
             ('0_200', 0, 200),
             ('200_400', 200, 400)
         ]
-        result = {"junc": True, "interval": "0_200", "within": False, "anchor": 22, "nm": 0, "nm_in_bp_area": 0}
+        result = {"junc": True, "interval": "0_200", "within": False, "anchor": 22, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
         self.assertEqual(classify_read(172, 222, aln_pairs, interval, True, 10), result)
         
     def test_classify_softjunc(self):
@@ -347,8 +346,41 @@ class TestRequantify(unittest.TestCase):
             ('0_400', 0, 400),
             ('400_786', 400, 786)
         ]
-        result = {"junc": False, "within": False, "interval": "", "anchor": 7, "nm": 0, "nm_in_bp_area": 0}
+        result = {"junc": False, "within": False, "interval": "", "anchor": 7, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
         self.assertEqual(classify_read(393, 444, aln_pairs, interval, True, 10), result)
+
+    def test_classify_snp_or_indel(self):
+        aln_pairs = [
+            (0, 5, 'C'), 
+            (1, 6, 'T'),
+            (2, 7, 'T'),
+            (3, 8, 'A'),
+            (4, 9, 'A'),
+            (5, 10, 'C'),
+            (6, 10, 'C'),
+            (7, 11, 'T'),
+            (8, 12, 'T'),
+            (9, 13, 'G'),
+            (10, 14, 'A')
+        ]
+
+        interval = [
+            ('0_10', 0, 10),
+            ('10_20', 10, 20)
+        ]
+
+        result = {
+            "junc": True,
+            "within": False,
+            "interval": '0_10',
+            "anchor": 4,
+            "nm": 0,
+            "nm_in_bp_area": 0,
+            "contains_snp_or_indel": True
+        }
+
+        self.assertEqual(classify_read(5, 14, aln_pairs, interval, True, 4), result)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -84,7 +84,7 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
     # define match bases for get_aligned_pairs()
     MATCH_BASES = ['A', 'C', 'G', 'T']
 
-    read_info = {"junc": False, "within": False, "interval": "", "anchor": 0, "nm": 0, "nm_in_bp_area": 0}
+    read_info = {"junc": False, "within": False, "interval": "", "anchor": 0, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
     for (interval_name, ref_start, ref_stop) in intervals:
         # Check if read spans ref start
         if aln_start <= ref_stop - bp_dist and aln_stop >= ref_stop + bp_dist:
@@ -110,9 +110,13 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
             no_snp = all(match_list_junc)
             num_mismatches_junc = match_list_junc.count(False)
             read_info["nm_in_bp_area"] = num_mismatches_junc
-            if (no_ins_or_del and no_snp) or allow_mismatches:
-                read_info["junc"] = True
-                read_info["interval"] = interval_name
+            read_info["junc"] = True
+            read_info["interval"] = interval_name
+            # Classify junctions reads independant of INDELs or mismatches
+            if no_ins_or_del and no_snp:
+                read_info["contains_snp_or_indel"] = False
+            else:
+                read_info["contains_snp_or_indel"] = True
         if aln_start <= ref_stop and aln_stop >= ref_stop:
             # What will happen if multiple BPs with small distance to each other are present?
             # e.g. if a read spans multiple BPs, which anchor will be used?
@@ -516,10 +520,11 @@ class Quantification(object):
 
             # Check if reads are junction reads
             if r1_info["junc"]:
-                if self.interval_mode:
-                    self.counts[seq_name][interval_name][0] += 1
-                else:
-                    self.counts[seq_name][0] += 1
+                if (r1_info["nm_in_bp_area"] == 0 and not r1_info["contains_snp_or_indel"]) or self.allow_mismatches:
+                    if self.interval_mode:
+                        self.counts[seq_name][interval_name][0] += 1
+                    else:
+                        self.counts[seq_name][0] += 1
                 r1_type = "junc"
 
             if r1_info["within"]:
@@ -543,10 +548,11 @@ class Quantification(object):
 
 
             if r2_info["junc"]:
-                if self.interval_mode:
-                    self.counts[seq_name][interval_name][0] += 1
-                else:
-                    self.counts[seq_name][0] += 1                
+                if (r2_info["nm_in_bp_area"] == 0 and not r2_info["contains_snp_or_indel"]) or self.allow_mismatches:
+                    if self.interval_mode:
+                        self.counts[seq_name][interval_name][0] += 1
+                    else:
+                        self.counts[seq_name][0] += 1                
                 r2_type = "junc"
 
             if r2_info["within"]:
