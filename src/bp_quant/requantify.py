@@ -87,8 +87,9 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, bp_dist):
     read_info = {"class": "unclassified", "interval": "", "anchor": 0, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
     for (interval_name, ref_start, ref_stop) in intervals:
         # Check if read spans ref start
+        aln_seq_junc = None
+        no_ins_or_del = None
         if aln_start <= ref_stop - bp_dist and aln_stop >= ref_stop + bp_dist:
-            num_mismatches = 0
             # test that read maps exact (or no del/ins) in pos +/- bp_dist
 
             reg_start = ref_stop - bp_dist
@@ -104,20 +105,11 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, bp_dist):
 
             # test if reference sequence are all capital (means match) according
             # to https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_aligned_pairs
-            aln_seq_junc = [s for (q, r, s) in aln_pairs if r is not None and reg_start <= r and r < reg_end]
-            # Get number of mismatches for this read
-            match_list_junc = [s in MATCH_BASES for s in aln_seq_junc]
-            no_snp = all(match_list_junc)
-            num_mismatches_junc = match_list_junc.count(False)
-            read_info["nm_in_bp_area"] = num_mismatches_junc
+            aln_seq_junc = [s for (q, r, s) in aln_pairs if r is not None and reg_start <= r < reg_end]
             read_info["class"] = "junc"
             read_info["interval"] = interval_name
-            # Classify junctions reads independant of INDELs or mismatches
-            if no_ins_or_del and no_snp:
-                read_info["contains_snp_or_indel"] = False
-            else:
-                read_info["contains_snp_or_indel"] = True
         if aln_start <= ref_stop and aln_stop >= ref_stop:
+            aln_seq_junc = [s for (q, r, s) in aln_pairs if r is not None and aln_start <= r < aln_stop]
             # What will happen if multiple BPs with small distance to each other are present?
             # e.g. if a read spans multiple BPs, which anchor will be used?
             # Suggestion: Take the largest anchor among BPs for a read
@@ -126,13 +118,22 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, bp_dist):
             if 0 < anchor <= bp_dist:
                 read_info["class"] = "softjunc"
             read_info["anchor"] = anchor
-        
+        if aln_seq_junc:
+            # Get number of mismatches for this read
+            match_list_junc = [s in MATCH_BASES for s in aln_seq_junc]
+            no_snp = all(match_list_junc)
+            num_mismatches_junc = match_list_junc.count(False)
+            read_info["nm_in_bp_area"] = num_mismatches_junc
+                    # Classify junctions reads independant of INDELs or mismatches
+            if no_ins_or_del and no_snp:
+                read_info["contains_snp_or_indel"] = False
+            else:
+                read_info["contains_snp_or_indel"] = True
+        num_mismatches = 0
         if aln_pairs:
             aln_seq = [s for (q, r, s) in aln_pairs if r is not None]
             match_list = [s in MATCH_BASES for s in aln_seq]
             num_mismatches = match_list.count(False)
-        else:
-            num_mismatches = 0
         read_info["nm"] = num_mismatches
 
         # read maps completely within the interval
