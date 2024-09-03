@@ -525,7 +525,7 @@ class TestRequantify(unittest.TestCase):
         ]
         result = {
             "class": "softjunc", 
-            "interval": "", 
+            "interval": "0_400", 
             "anchor": 7, 
             "nm": 0, 
             "nm_in_bp_area": 0, 
@@ -564,7 +564,7 @@ class TestRequantify(unittest.TestCase):
         ]
         result = {
             "class": "softjunc",
-            "interval": "",
+            "interval": "0_400",
             "anchor": 1,
             "nm": 1,
             "nm_in_bp_area": 1,

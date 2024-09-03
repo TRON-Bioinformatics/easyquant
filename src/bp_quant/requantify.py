@@ -118,6 +118,7 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, bp_dist):
             if 0 < anchor <= bp_dist:
                 read_info["class"] = "softjunc"
             read_info["anchor"] = anchor
+            read_info["interval"] = interval_name
         if aln_seq_junc:
             # Get number of mismatches for this read
             match_list_junc = [s in MATCH_BASES for s in aln_seq_junc]
