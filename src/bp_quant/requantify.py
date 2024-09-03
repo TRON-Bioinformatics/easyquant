@@ -73,7 +73,7 @@ def get_seq_to_pos(seq_table_file):
 
 
 
-def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, bp_dist):
+def classify_read(aln_start, aln_stop, aln_pairs, intervals, bp_dist):
     """
     Classifies read and returns dict with information on mapping position
     """
@@ -84,11 +84,12 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
     # define match bases for get_aligned_pairs()
     MATCH_BASES = ['A', 'C', 'G', 'T']
 
-    read_info = {"junc": False, "within": False, "interval": "", "anchor": 0, "nm": 0, "nm_in_bp_area": 0}
+    read_info = {"class": "unclassified", "interval": "", "anchor": 0, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
     for (interval_name, ref_start, ref_stop) in intervals:
         # Check if read spans ref start
+        aln_seq_junc = None
+        no_ins_or_del = None
         if aln_start <= ref_stop - bp_dist and aln_stop >= ref_stop + bp_dist:
-            num_mismatches = 0
             # test that read maps exact (or no del/ins) in pos +/- bp_dist
 
             reg_start = ref_stop - bp_dist
@@ -104,36 +105,51 @@ def classify_read(aln_start, aln_stop, aln_pairs, intervals, allow_mismatches, b
 
             # test if reference sequence are all capital (means match) according
             # to https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_aligned_pairs
-            aln_seq_junc = [s for (q, r, s) in aln_pairs if r is not None and reg_start <= r and r < reg_end]
-            # Get number of mismatches for this read
-            match_list_junc = [s in MATCH_BASES for s in aln_seq_junc]
-            no_snp = all(match_list_junc)
-            num_mismatches_junc = match_list_junc.count(False)
-            read_info["nm_in_bp_area"] = num_mismatches_junc
-            if (no_ins_or_del and no_snp) or allow_mismatches:
-                read_info["junc"] = True
-                read_info["interval"] = interval_name
+            aln_seq_junc = [s for (q, r, s) in aln_pairs if r is not None and reg_start <= r < reg_end]
+            read_info["class"] = "junc"
+            read_info["interval"] = interval_name
         if aln_start <= ref_stop and aln_stop >= ref_stop:
+            aln_seq_junc = [s for (q, r, s) in aln_pairs if r is not None and aln_start <= r < aln_stop]
             # What will happen if multiple BPs with small distance to each other are present?
             # e.g. if a read spans multiple BPs, which anchor will be used?
             # Suggestion: Take the largest anchor among BPs for a read
             # or sum them up
             anchor = min(aln_stop - ref_stop, ref_stop - aln_start)
+            if 0 < anchor <= bp_dist:
+                read_info["class"] = "softjunc"
             read_info["anchor"] = anchor
-        
+            read_info["interval"] = interval_name
+        if aln_seq_junc:
+            # Get number of mismatches for this read
+            match_list_junc = [s in MATCH_BASES for s in aln_seq_junc]
+            no_snp = all(match_list_junc)
+            num_mismatches_junc = match_list_junc.count(False)
+            read_info["nm_in_bp_area"] = num_mismatches_junc
+                    # Classify junctions reads independant of INDELs or mismatches
+            if no_ins_or_del and no_snp:
+                read_info["contains_snp_or_indel"] = False
+            else:
+                read_info["contains_snp_or_indel"] = True
+        num_mismatches = 0
         if aln_pairs:
             aln_seq = [s for (q, r, s) in aln_pairs if r is not None]
             match_list = [s in MATCH_BASES for s in aln_seq]
             num_mismatches = match_list.count(False)
-        else:
-            num_mismatches = 0
         read_info["nm"] = num_mismatches
 
         # read maps completely within the interval
         if aln_start >= ref_start and aln_stop <= ref_stop:
-            read_info["within"] = True
+            read_info["class"] = "within"
             read_info["interval"] = interval_name
     return read_info
+
+
+def classify_pair(r1_info, r2_info):
+    if r1_info["class"] == "within" and r2_info["class"] == "within" and r1_info["interval"] != r2_info["interval"]:
+        r1_info["class"] == "span"
+        r2_info["class"] == "span"
+
+    return r1_info, r2_info
 
 
 def process_secondary_alignments(read_dict):
@@ -483,28 +499,37 @@ class Quantification(object):
         r2_cigar = r2["cigar"]
 
         # Get read information [junc, within, interval]
-        r1_info = classify_read(
+        # r1_info = classify_read(
+        #     aln_start=r1_start,
+        #     aln_stop=r1_stop,
+        #     aln_pairs=r1_pairs,
+        #     intervals=self.seq_to_pos[seq_name][0],
+        #     bp_dist=self.bp_dist
+        # )
+        # r2_info = classify_read(
+        #     aln_start=r2_start,
+        #     aln_stop=r2_stop,
+        #     aln_pairs=r2_pairs,
+        #     intervals=self.seq_to_pos[seq_name][0],
+        #     bp_dist=self.bp_dist
+        # )
+
+        r1_info, r2_info = classify_pair(classify_read(
             aln_start=r1_start,
             aln_stop=r1_stop,
             aln_pairs=r1_pairs,
             intervals=self.seq_to_pos[seq_name][0],
-            allow_mismatches=self.allow_mismatches,
             bp_dist=self.bp_dist
-        )
-        r2_info = classify_read(
+        ), classify_read(
             aln_start=r2_start,
             aln_stop=r2_stop,
             aln_pairs=r2_pairs,
             intervals=self.seq_to_pos[seq_name][0],
-            allow_mismatches=self.allow_mismatches,
             bp_dist=self.bp_dist
-        )
+        ))
         
         if not self.interval_mode:
             self.counts[seq_name][2] = max([r1_info["anchor"], r2_info["anchor"], self.counts[seq_name][2]])
-            
-        r1_type = ""
-        r2_type = ""
 
         if r1_info["interval"]:
             interval_name = r1_info["interval"]
@@ -515,14 +540,14 @@ class Quantification(object):
                         self.cov_dict[seq_name][interval_name][r] += 1
 
             # Check if reads are junction reads
-            if r1_info["junc"]:
-                if self.interval_mode:
-                    self.counts[seq_name][interval_name][0] += 1
-                else:
-                    self.counts[seq_name][0] += 1
-                r1_type = "junc"
+            if r1_info["class"] == "junc":
+                if not r1_info["contains_snp_or_indel"] or self.allow_mismatches:
+                    if self.interval_mode:
+                        self.counts[seq_name][interval_name][0] += 1
+                    else:
+                        self.counts[seq_name][0] += 1
 
-            if r1_info["within"]:
+            if r1_info["class"] in ("within", "span"):
                 if self.interval_mode:
                     self.counts[seq_name][interval_name][2] += 1
                 else:
@@ -530,7 +555,6 @@ class Quantification(object):
                         self.counts[seq_name][3] += 1
                     elif interval_name == right_interval:
                         self.counts[seq_name][4] += 1
-                r1_type = "within"
 
 
         if r2_info["interval"]:
@@ -542,14 +566,14 @@ class Quantification(object):
                         self.cov_dict[seq_name][interval_name][r] += 1
 
 
-            if r2_info["junc"]:
-                if self.interval_mode:
-                    self.counts[seq_name][interval_name][0] += 1
-                else:
-                    self.counts[seq_name][0] += 1                
-                r2_type = "junc"
+            if r2_info["class"] == "junc":
+                if not r2_info["contains_snp_or_indel"] or self.allow_mismatches:
+                    if self.interval_mode:
+                        self.counts[seq_name][interval_name][0] += 1
+                    else:
+                        self.counts[seq_name][0] += 1                
 
-            if r2_info["within"]:
+            if r2_info["class"] in ("within", "span"):
                 if self.interval_mode:
                     self.counts[seq_name][interval_name][2] += 1
                 else:
@@ -557,13 +581,11 @@ class Quantification(object):
                         self.counts[seq_name][3] += 1
                     elif interval_name == right_interval:
                         self.counts[seq_name][4] += 1
-                r2_type = "within"
 
 
-        # Check if r1 and r2 form a spanning pair
-        if r1_info["within"] and r2_info["within"] and r1_info["interval"] != r2_info["interval"]:
+        # Count spanning pairs individually
+        if r1_info["class"] == "span" and r2_info["class"] == "span":
             if self.interval_mode:
-
                 start = False
                 spanning_intervals = []
                 for interval_name, ref_start, ref_stop in self.seq_to_pos[seq_name][0]:
@@ -578,18 +600,12 @@ class Quantification(object):
                     self.counts[seq_name][interval_name][1] += 1
             else:
                 self.counts[seq_name][1] += 1
-            r1_type = "span"
-            r2_type = "span"
 
         if r1["unmapped"]:
-            r1_type = "unmapped"
+            r1_info["class"] = "unmapped"
         if r2["unmapped"]:
-            r2_type = "unmapped"
+            r2_info["class"] = "unmapped"
 
-        if 0 < r1_info["anchor"] <= self.bp_dist:
-            r1_type = "softjunc"
-        if 0 < r2_info["anchor"] <= self.bp_dist:
-            r2_type = "softjunc"
         # Get mismatch information
         r1_nm = r1_info["nm"]
         r2_nm = r2_info["nm"]
@@ -598,12 +614,12 @@ class Quantification(object):
         bp = self.seq_to_pos[seq_name][1]
         self.reads_out.write(
             "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                read_name, "R1", r1_flag, seq_name, bp, r1_start, r1_stop, r1_cigar, r1_nm, r1_nm_junc, r1_type
+                read_name, "R1", r1_flag, seq_name, bp, r1_start, r1_stop, r1_cigar, r1_nm, r1_nm_junc, r1_info["class"]
             ).encode()
         )
         self.reads_out.write(
             "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                read_name, "R2", r2_flag, seq_name, bp, r2_start, r2_stop, r2_cigar, r2_nm, r2_nm_junc, r2_type
+                read_name, "R2", r2_flag, seq_name, bp, r2_start, r2_stop, r2_cigar, r2_nm, r2_nm_junc, r2_info["class"]
             ).encode()
         )
 
