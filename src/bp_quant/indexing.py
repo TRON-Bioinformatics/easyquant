@@ -23,13 +23,6 @@ def get_index_cmd_bowtie2(fasta_in, index_out, num_threads):
     )
     return cmd
 
-    
-def get_index_cmd_bwa(fasta_in):
-    cmd = "bwa index {0}".format(
-        fasta_in
-    )
-    return cmd
-
 
 def get_index_cmd_star(fasta_in, index_out, num_threads):
     (seq_num, fasta_size) = get_sequence_count_and_len(fasta_in)
@@ -55,8 +48,6 @@ def get_index_cmd_star(fasta_in, index_out, num_threads):
 def run(fasta_in, index_out, threads, method):
     if method == "bowtie2":
         subprocess.run(get_index_cmd_bowtie2(fasta_in, index_out, threads).split(" "))
-    elif method == "bwa":
-        subprocess.run(get_index_cmd_bwa(fasta_in).split(" "))
     elif method == "star":
         subprocess.run(get_index_cmd_star(fasta_in, index_out, threads).split(" "))
 
@@ -87,7 +78,7 @@ def add_indexing_args(parser):
         "-m",
         "--method",
         dest="method",
-        choices=["star", "bowtie2", "bwa"],
+        choices=["star", "bowtie2"],
         help="Specify aligner for execution",
         default="star",
     )
