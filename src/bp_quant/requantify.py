@@ -606,20 +606,30 @@ class Quantification(object):
         if r2["unmapped"]:
             r2_info["class"] = "unmapped"
 
-        # Get mismatch information
-        r1_nm = r1_info["nm"]
-        r2_nm = r2_info["nm"]
-        r1_nm_junc = r1_info["nm_in_bp_area"]
-        r2_nm_junc = r2_info["nm_in_bp_area"]
         bp = self.seq_to_pos[seq_name][1]
+        
         self.reads_out.write(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                read_name, "R1", r1_flag, seq_name, bp, r1_start, r1_stop, r1_cigar, r1_nm, r1_nm_junc, r1_info["class"]
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                read_name, "R1", r1_flag, 
+                seq_name, bp, 
+                r1_start, r1_stop, 
+                r1_cigar, 
+                r1_info["nm"], 
+                r1_info["nm_in_bp_area"], 
+                r1_info["class"],
+                r1_info["contains_snp_or_indel"]
             ).encode()
         )
         self.reads_out.write(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
-                read_name, "R2", r2_flag, seq_name, bp, r2_start, r2_stop, r2_cigar, r2_nm, r2_nm_junc, r2_info["class"]
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                read_name, "R2", r2_flag, 
+                seq_name, bp, 
+                r2_start, r2_stop, 
+                r2_cigar, 
+                r2_info["nm"], 
+                r2_info["nm_in_bp_area"], 
+                r2_info["class"],
+                r2_info["contains_snp_or_indel"]
             ).encode()
         )
 
