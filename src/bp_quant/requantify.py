@@ -253,7 +253,8 @@ class Quantification(object):
             "cigar",
             "num_mismatches",
             "num_mismatches_in_bp_area",
-            "classification"
+            "classification",
+            "contains_snp_or_indel"
         ]) + "\n").encode())
         self.bp_dist = bp_dist
         self.allow_mismatches = allow_mismatches
@@ -607,7 +608,7 @@ class Quantification(object):
             r2_info["class"] = "unmapped"
 
         bp = self.seq_to_pos[seq_name][1]
-        
+
         self.reads_out.write(
             "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
                 read_name, "R1", r1_flag, 
