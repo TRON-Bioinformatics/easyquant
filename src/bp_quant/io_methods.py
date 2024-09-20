@@ -1,54 +1,45 @@
-import csv
+"""
+IO module to execute commands and get read counts.
+"""
+
 import logging
 import os
 import subprocess
 import sys
 
-csv.field_size_limit(sys.maxsize)
-
 
 def create_folder(folder_path):
+    """Creates folder on the filesystem if it doesn't exist."""
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
+
 def execute_cmd(cmd, working_dir = "."):
     """This function pushes a command into a subprocess."""
-    logging.info("Executing CMD: {}".format(cmd))
-    p = subprocess.run(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE, cwd = working_dir, shell=True)
+    logging.info("Executing CMD: %s", cmd)
+    p = subprocess.run(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE, cwd = working_dir, check=False, shell=True)
     if p.returncode != 0:
-        logging.error("Command \"{}\" returned non-zero exit status".format(cmd))
+        logging.error("Command \"%s\" returned non-zero exit status", cmd)
         logging.error(p.stderr)
         sys.exit(1)
 
 
-def csv_to_fasta(csv_in, fasta_out):
-    """This function converts the target sequences TSV/CSV file to the FASTA format."""
-    outf = open(fasta_out, "w")
-    with open(csv_in, "r", newline="\n") as csvfile:
-        # Auto detect dialect of input file
-        dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
-        csvfile.seek(0)
-        reader = csv.DictReader(csvfile, dialect=dialect)
-
-        # Iterate over input file rows
-        for row in reader:
-
-            name = row["name"]
-            sequence = row["sequence"]
-            position = row["position"]
-
-            outf.write(">{}\n".format(name))
-            for i in range(0, len(sequence), 60):
-                outf.write("{}\n".format(sequence[i:i+60]))
-
-    outf.close()
+def get_read_count(infile, input_format="fq"):
+    """Returns the read count from the input file."""
+    if input_format == "fq":
+        return get_read_count_fq(infile)
+    elif input_format == "bam":
+        return get_read_count_bam(infile)
 
 
-def get_fasta_size(fasta):
-    """This function calculates the FASTA size in bp."""
-    fasta_size = 0
-    with open(fasta) as inf:
-        for line in inf:
-            if not line.rstrip().startswith(">"):
-                fasta_size += len(line.rstrip())
-    return fasta_size
+def get_read_count_fq(fq_file):
+    """Parses input FASTQ to get read count"""
+    ps = subprocess.Popen(("zcat", fq_file), stdout=subprocess.PIPE)
+    result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
+    return int(result) / 4
+
+
+def get_read_count_bam(bam_file):
+    """Parses input BAM to get read count"""
+    result = subprocess.check_output(["samtools", "view", "-c", bam_file])
+    return int(result)

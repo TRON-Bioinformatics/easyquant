@@ -1,8 +1,13 @@
+"""
+Alignment module based on pysam.
+"""
+
+import pysam
+
 def get_aligner(alignment: pysam.AlignmentFile) -> str:
     """
     Uses pysam to detect the aligner used to create the input BAM file
     """
-    #header_dict = pysam.AlignmentFile(bam_file, "rb").header.to_dict()
     header_dict = alignment.header.to_dict()
     aligner = header_dict["PG"][0]["ID"].lower()
     return aligner

@@ -1,34 +1,21 @@
+"""
+Pipeline module for the overall process.
+CSV2FASTA -> Indexing -> Alignment -> Counting
+"""
+
 import logging
 import os
-import subprocess
-import sys
 
 import bp_quant.io_methods as IOMethods
 from bp_quant.version import version
 
 
-def get_read_count(infile, format="fq"):
-    if format == "fq":
-        return __get_read_count_fq(infile)
-    elif format == "bam":
-        return __get_read_count_bam(infile)
 
-    
-def __get_read_count_fq(fq_file):
-    """Parses input FASTQ to get read count"""
-    ps = subprocess.Popen(("zcat", fq_file), stdout=subprocess.PIPE)
-    result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
-    return int(result) / 4
+class Pipeline:
+    """
+    Creates pipeline object that can be run.
+    """
 
-
-def __get_read_count_bam(bam_file):
-    """Parses input BAM to get read count"""
-    result = subprocess.check_output(["samtools", "view", "-c", bam_file])
-    return int(result)
-
-
-class Pipeline(object):
-    
     def __init__(self, fq1, fq2, bam, seq_tab, bp_distance, working_dir, allow_mismatches, interval_mode, skip_singleton, keep_aln, keep_all):
 
         self.working_dir = os.path.abspath(working_dir)
@@ -63,26 +50,24 @@ class Pipeline(object):
         self.keep_all = keep_all
         self.skip_singleton = skip_singleton
 
-        
+
     def run(self, method, num_threads, align_cmd_params):
         """This function runs the pipeline on paired-end FASTQ files."""
 
-        script_call = "python {} {}".format(os.path.realpath(__file__), " ".join(sys.argv[1:]))
-        
-        with open(os.path.join(self.working_dir, "run_command.sh"), "w") as outf:
+        with open(os.path.join(self.working_dir, "run_command.sh"), "w", encoding="utf8") as outf:
             outf.write("#!/bin/sh\n\n")
-            outf.write("version=\"{}\"\n".format(version))
-            outf.write("python {} \\\n".format(os.path.realpath(__file__)))
+            outf.write(f"version=\"{version}\"\n")
+            outf.write(f"python {os.path.realpath(__file__)} \\\n")
             if self.fq1 and self.fq2:
-                outf.write("-1 {} \\\n".format(self.fq1))
-                outf.write("-2 {} \\\n".format(self.fq2))
+                outf.write(f"-1 {self.fq1} \\\n")
+                outf.write(f"-2 {self.fq2} \\\n")
             elif self.bam:
-                outf.write("-b {} \\\n".format(self.bam))
-            outf.write("-s {} \\\n".format(self.seq_tab))
-            outf.write("-o {} \\\n".format(self.working_dir))
-            outf.write("-d {} \\\n".format(self.bp_distance))
-            outf.write("-m {} \\\n".format(method))
-            outf.write("-t {} \\\n".format(num_threads))
+                outf.write(f"-b {self.bam} \\\n")
+            outf.write(f"-s {self.seq_tab} \\\n")
+            outf.write(f"-o {self.working_dir} \\\n")
+            outf.write(f"-d {self.bp_distance} \\\n")
+            outf.write(f"-m {method} \\\n")
+            outf.write(f"-t {num_threads} \\\n")
             if self.interval_mode:
                 outf.write("--interval_mode \\\n")
             if self.allow_mismatches:
@@ -93,12 +78,12 @@ class Pipeline(object):
                 outf.write(align_cmd_params)
 
 
-        logging.info("Executing bpquant {}".format(version))
+        logging.info("Executing bpquant %s", version)
         if self.fq1 and self.fq2:
-            logging.info("FQ1={}".format(self.fq1))
-            logging.info("FQ2={}".format(self.fq2))
+            logging.info("FQ1=%s", self.fq1)
+            logging.info("FQ2=%s", self.fq2)
         elif self.bam:
-            logging.info("BAM={}".format(self.bam))
+            logging.info("BAM=%s", self.bam)
 
         genome_path = os.path.join(self.working_dir, "index")
         IOMethods.create_folder(genome_path)
@@ -113,7 +98,7 @@ class Pipeline(object):
         clean_up_files = [genome_path, sam_file]
         if not self.keep_aln:
             clean_up_files.append(cram_file)
-            clean_up_files.append("{}.crai".format(cram_file))
+            clean_up_files.append(f"{cram_file}.crai")
             clean_up_files.append(fasta_file)
         
         #create folders
@@ -121,81 +106,60 @@ class Pipeline(object):
 
 
         if not os.path.exists(num_reads_file) or os.stat(num_reads_file).st_size == 0:
-            with open(num_reads_file, "w") as outf:
+            with open(num_reads_file, "w", encoding="utf8") as outf:
                 if self.fq1:
-                    outf.write(str(int(get_read_count(self.fq1, "fq"))))
+                    outf.write(str(int(IOMethods.get_read_count(self.fq1, "fq"))))
                 elif self.bam:
-                    outf.write(str(int(get_read_count(self.bam, "bam"))))
+                    outf.write(str(int(IOMethods.get_read_count(self.bam, "bam"))))
 
-        csv_to_fasta_cmd = "bp_quant csv2fasta \
-        --input_csv {} \
-        --output_fasta {}".format(
-            self.seq_tab,
-            fasta_file
-        )
+        csv_to_fasta_cmd = f"bp_quant csv2fasta \
+        --input_csv {self.seq_tab} \
+        --output_fasta {fasta_file}"
 
-        index_cmd = "bp_quant index \
-        --input_fasta {} \
-        --index_dir {} \
-        -t {} \
-        --method {}".format(
-            fasta_file,
-            genome_path,
-            num_threads,
-            method
-        )
-        
+
+        index_cmd = f"bp_quant index \
+        --input_fasta {fasta_file} \
+        --index_dir {genome_path} \
+        -t {num_threads} \
+        --method {method}"
+
         align_cmd = ""
         custom_params = ""
         if align_cmd_params:
-            custom_params = "--params '{}'".format(align_cmd_params)
+            custom_params = f"--params '{align_cmd_params}'"
         if self.fq1 and self.fq2:
-            align_cmd = "bp_quant align \
-            --fq1 {} \
-            --fq2 {} \
-            --index_dir {} \
-            --output_path {} \
-            -t {} \
-            -m {} \
-            {}".format(
-                self.fq1,
-                self.fq2,
-                genome_path,
-                align_path,
-                num_threads,
-                method,
-                custom_params
-            )
+            align_cmd = f"bp_quant align \
+            --fq1 {self.fq1} \
+            --fq2 {self.fq2} \
+            --index_dir {genome_path} \
+            --output_path {align_path} \
+            -t {num_threads} \
+            -m {method} \
+            {custom_params}"
         elif self.bam:
-            align_cmd = "bp_quant align \
-            --bam {} \
-            --index_dir {} \
-            --output_path {} \
-            -t {} \
-            -m {} \
-            {}".format(
-                self.bam,
-                genome_path,
-                align_path,
-                num_threads,
-                method,
-                custom_params
-            )
+            align_cmd = f"bp_quant align \
+            --bam {self.bam} \
+            --index_dir {genome_path} \
+            --output_path {align_path} \
+            -t {num_threads} \
+            -m {method} \
+            {custom_params}"
 
         if method == "star":
             clean_up_files.extend([
-                "{}/Log.progress.out".format(align_path),
-                "{}/SJ.out.tab".format(align_path),
-                "{}/_STARtmp".format(align_path),
+                f"{align_path}/Log.progress.out",
+                f"{align_path}/SJ.out.tab",
+                f"{align_path}/_STARtmp",
             ])
 
             
-        sam_to_cram_cmd = "samtools sort -@ {2} -m 2G --reference {3} -O CRAM -o {1} {0} && samtools index {1}".format(
-            sam_file,
-            cram_file,
-            num_threads,
-            fasta_file
-        )
+        sam_to_cram_cmd = f"samtools sort \
+            -@ {num_threads} \
+            -m 2G \
+            --reference {fasta_file} \
+            -O CRAM \
+            -o {cram_file} {sam_file} \
+            && samtools index {cram_file}"
 
         allow_mismatches_str = ""
         interval_mode_str = ""
@@ -207,47 +171,43 @@ class Pipeline(object):
         if self.skip_singleton:
             skip_singleton_str = " --skip_singleton"
 
-        quant_cmd = "bp_quant count \
-        -i {0} \
-        -t {1} \
-        -d {2} \
-        -o {3}{4}{5}".format(
-            sam_file,
-            self.seq_tab,
-            self.bp_distance,
-            self.working_dir,
-            allow_mismatches_str,
-            interval_mode_str,
-            skip_singleton_str
-        )
+        quant_cmd = f"bp_quant count \
+            -i {sam_file} \
+            -t {self.seq_tab} \
+            -d {self.bp_distance} \
+            -o {self.working_dir}\
+            {allow_mismatches_str}\
+            {interval_mode_str}\
+            {skip_singleton_str}"
 
-        clean_cmd = "for file in {}; \
-            do rm -rf $file; done".format(" ".join(clean_up_files))
+        clean_up_files_str = " ".join(clean_up_files)
+        clean_cmd = f"for file in {clean_up_files_str}; \
+            do rm -rf $file; done"
 
         # define bash script in working directory    
         shell_script = os.path.join(self.working_dir, "requant.sh")
         # start to write shell script to execute mapping cmd
-        with open(shell_script, "w") as out_shell:
+        with open(shell_script, "w", encoding="utf8") as out_shell:
             out_shell.write("#!/bin/sh\n\n")
             if self.fq1 and self.fq2:
-                out_shell.write("fq1_in={}\n".format(self.fq1))
-                out_shell.write("fq2_in={}\n".format(self.fq2))
+                out_shell.write(f"fq1_in={self.fq1}\n")
+                out_shell.write(f"fq2_in={self.fq2}\n")
             elif self.bam:
-                out_shell.write("bam_in={}\n".format(self.bam))
-            out_shell.write("working_dir={}\n".format(self.working_dir))
+                out_shell.write(f"bam_in={self.bam}\n")
+            out_shell.write(f"working_dir={self.working_dir}\n")
             out_shell.write("echo \"Starting pipeline...\"\n")
             out_shell.write("echo \"Generating index\"\n")
-            out_shell.write("{}\n".format(index_cmd))
+            out_shell.write(f"{index_cmd}\n")
             out_shell.write("echo \"Starting alignment\"\n")
-            out_shell.write("{}\n".format(align_cmd))
+            out_shell.write(f"{align_cmd}\n")
             out_shell.write("echo \"Starting quantification\"\n")
-            out_shell.write("{}\n".format(quant_cmd))
+            out_shell.write(f"{quant_cmd}\n")
             if self.keep_aln or self.keep_all:
                 out_shell.write("echo \"Starting SAM->CRAM conversion\"\n")
-                out_shell.write("{}\n".format(sam_to_cram_cmd))
+                out_shell.write(f"{sam_to_cram_cmd}\n")
             else:
                 out_shell.write("echo \"Starting cleanup step\"\n")
-                out_shell.write("{}\n".format(clean_cmd))
+                out_shell.write(f"{clean_cmd}\n")
             out_shell.write("echo \"Processing done!\"\n")
 
 
@@ -267,11 +227,12 @@ class Pipeline(object):
         if not self.keep_all:
             IOMethods.execute_cmd(clean_cmd)
 
-        logging.info("Processing complete for {}".format(self.working_dir))
+        logging.info("Processing complete for %s", self.working_dir)
 
 
 
 def add_pipeline_args(parser):
+    """Parses command line arguments."""
     parser.add_argument(
         "-1",
         "--fq1",
@@ -309,14 +270,16 @@ def add_pipeline_args(parser):
         "--bp_distance",
         dest="bp_distance",
         type=int,
-        help="Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for junction/spanning read counting",
+        help="Threshold in base pairs for the required overlap size \
+            of reads on both sides of the breakpoint for junction/spanning read counting",
         default=10
     )
     parser.add_argument(
         "--allow_mismatches",
         dest="allow_mismatches",
         action="store_true",
-        help="Allow mismatches within the region around the breakpoint determined by the bp_distance parameter"
+        help="Allow mismatches within the region around the breakpoint determined \
+            by the bp_distance parameter"
     )
     parser.add_argument(
         "--interval_mode",
@@ -369,6 +332,7 @@ def add_pipeline_args(parser):
 
 
 def pipeline_command(args):
+    """Calls pipeline with the parsed command line arguments."""
     pipe = Pipeline(
         fq1=args.fq1,
         fq2=args.fq2,

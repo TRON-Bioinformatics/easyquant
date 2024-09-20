@@ -10,6 +10,7 @@ csv.field_size_limit(sys.maxsize)
 # logger = logging.getLogger(__name__)
 
 def generate_intervals(pos_arr: list) -> list:
+    """Generates intervals from a positions list."""
     intervals = []
     for i in range(len(pos_arr)-1):
         interval_name = "{}_{}".format(pos_arr[i], pos_arr[i+1])
@@ -18,9 +19,10 @@ def generate_intervals(pos_arr: list) -> list:
 
 
 def read_table(seq_table_file: str):
+    """Parses input table and yields iterator."""
     #logger.info("Parsing input sequences from file (path={}).".format(seq_table_file))
 
-    with open(seq_table_file, "r") as csvfile:
+    with open(seq_table_file, "r", encoding="utf8") as csvfile:
         # Auto detect dialect of input file
         dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
         csvfile.seek(0)

@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+"""
+Tests for read classification module.
+"""
 
 import unittest
 
@@ -12,7 +14,7 @@ from bp_quant.read_classification import get_read_type
 
 
 class TestReadClassification(unittest.TestCase):
-    
+    """Provides unit tests for read classification module."""
     def setUp(self):
         self.aln_pairs = [
             (0, 5, 'C'), 
@@ -78,6 +80,9 @@ class TestReadClassification(unittest.TestCase):
 
         res = get_match_list(region_start = 6, region_end = 11, aln_pairs = self.aln_pairs)
         self.assertEqual(res, ['t', 'T', 'A', 'A', 'C', 'C'])
+        
+        res = get_match_list(region_start = 6, region_end = 11, aln_pairs = None)
+        self.assertEqual(res, [])
 
 
     def test_count_mismatches_in_region(self):
@@ -168,7 +173,7 @@ class TestReadClassification(unittest.TestCase):
         self.assertEqual(res, read_info)
 
         # Test case for junction read with INDELs
-        
+
 
         read_info = {
             "class": "junc",
