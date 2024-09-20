@@ -7,6 +7,10 @@ import pysam
 from statistics import mean, median
 import sys
 
+from alignment_info import get_aligner, get_sorting, is_chimeric_alignment, is_singleton
+from read_classification import classify_read
+from seq_table import get_seq_to_pos_dict
+
 csv.field_size_limit(sys.maxsize)
 
 
@@ -15,133 +19,10 @@ logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def get_aligner(bam_file):
-    """
-    Uses pysam to detect the aligner used to create the input BAM file
-    """
-    header_dict = pysam.AlignmentFile(bam_file, "rb").header.to_dict()
-    aligner = header_dict["PG"][0]["ID"].lower()
-    return aligner
-
-def get_sorting(bam_file):
-    """
-    Use pysam to grep SO from SAM header and check sorting of input file
-    """
-    header_dict = pysam.AlignmentFile(bam_file, "rb").header.to_dict()
-    sorting = header_dict['HD'].get('SO', 'unsorted')
-    return sorting
-
 def perc_true(lst):
     n = len(lst)
     num_true = sum(1 for val in lst if val > 0)
     return float(num_true)/n
-
-
-def get_seq_to_pos(seq_table_file):
-    """
-    Parses the sequence table and returns a dict where each sequence name is mapped to intervals
-    """
-
-    logger.info("Parsing input sequences from file (path={}).".format(seq_table_file))
-
-    # seq_to_pos is a dict from sequence name to the position of interest (breakpoint or junction)
-    seq_to_pos = {}
-
-    with open(seq_table_file, "r") as csvfile:
-        # Auto detect dialect of input file
-        dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
-        csvfile.seek(0)
-        reader = csv.DictReader(csvfile, dialect=dialect)
-
-        # Iterate over input file rows
-        for row in reader:
-            name = row["name"]
-
-            pos_arr = None
-            
-            if "," in row["position"]:
-                pos_arr = row["position"].split(",")
-            else:
-                pos_arr = [0, row["position"], len(row["sequence"])]
-            intervals = []
-            for i in range(len(pos_arr)-1):
-                interval_name = "{}_{}".format(pos_arr[i], pos_arr[i+1])
-                intervals.append((interval_name, int(pos_arr[i]), int(pos_arr[i+1])))
-            seq_to_pos[name] = (intervals, ",".join([str(x) for x in pos_arr]))
-
-    return seq_to_pos
-
-
-
-def classify_read(aln_start, aln_stop, aln_pairs, intervals, bp_dist):
-    """
-    Classifies read and returns dict with information on mapping position
-    """
-
-    # TODO: Can we extract start and stop position of alignment from aln_pairs to remove redundancy?
-    # Check performance
-    
-    # define match bases for get_aligned_pairs()
-    MATCH_BASES = ['A', 'C', 'G', 'T']
-
-    read_info = {"class": "unclassified", "interval": "", "anchor": 0, "nm": 0, "nm_in_bp_area": 0, "contains_snp_or_indel": False}
-    for (interval_name, ref_start, ref_stop) in intervals:
-        # Check if read spans ref start
-        aln_seq_junc = None
-        no_ins_or_del = None
-        if aln_start <= ref_stop - bp_dist and aln_stop >= ref_stop + bp_dist:
-            # test that read maps exact (or no del/ins) in pos +/- bp_dist
-
-            reg_start = ref_stop - bp_dist
-            reg_end = ref_stop + bp_dist - 1
-
-            q_start = [q for (q, r, s) in aln_pairs if r == reg_start][0]
-            q_end = [q for (q, r, s) in aln_pairs if r == reg_end][0]
-
-            # check if boundary positions are aligned and if the stretch length matches on read and reference
-            no_ins_or_del = q_start is not None and \
-                            q_end is not None and \
-                            (q_end - q_start) == (reg_end - reg_start)
-
-            # test if reference sequence are all capital (means match) according
-            # to https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_aligned_pairs
-            aln_seq_junc = [s for (q, r, s) in aln_pairs if r is not None and reg_start <= r < reg_end]
-            read_info["class"] = "junc"
-            read_info["interval"] = interval_name
-        if aln_start <= ref_stop and aln_stop >= ref_stop:
-            aln_seq_junc = [s for (q, r, s) in aln_pairs if r is not None and aln_start <= r < aln_stop]
-            # What will happen if multiple BPs with small distance to each other are present?
-            # e.g. if a read spans multiple BPs, which anchor will be used?
-            # Suggestion: Take the largest anchor among BPs for a read
-            # or sum them up
-            anchor = min(aln_stop - ref_stop, ref_stop - aln_start)
-            if 0 < anchor <= bp_dist:
-                read_info["class"] = "softjunc"
-            read_info["anchor"] = anchor
-            read_info["interval"] = interval_name
-        if aln_seq_junc:
-            # Get number of mismatches for this read
-            match_list_junc = [s in MATCH_BASES for s in aln_seq_junc]
-            no_snp = all(match_list_junc)
-            num_mismatches_junc = match_list_junc.count(False)
-            read_info["nm_in_bp_area"] = num_mismatches_junc
-                    # Classify junctions reads independant of INDELs or mismatches
-            if no_ins_or_del and no_snp:
-                read_info["contains_snp_or_indel"] = False
-            else:
-                read_info["contains_snp_or_indel"] = True
-        num_mismatches = 0
-        if aln_pairs:
-            aln_seq = [s for (q, r, s) in aln_pairs if r is not None]
-            match_list = [s in MATCH_BASES for s in aln_seq]
-            num_mismatches = match_list.count(False)
-        read_info["nm"] = num_mismatches
-
-        # read maps completely within the interval
-        if aln_start >= ref_start and aln_stop <= ref_stop:
-            read_info["class"] = "within"
-            read_info["interval"] = interval_name
-    return read_info
 
 
 def classify_pair(r1_info, r2_info):
@@ -200,44 +81,14 @@ def process_secondary_alignments(read_dict):
                     read_pairings.append((r1_sec, r2_sec))
     return read_pairings
 
-def is_chimeric_alignment(read: pysam.AlignedSegment) -> bool:
-    """
-    Determine if a given alignment is chimeric with mates mapping to different context sequences.
-    Following cases have to be considered.
-
-    * read is mapped (reference) != rnext is mapped (reference) -> TRUE
-    * read is unmapped (*) and rnext is mapped -> FALSE
-    * reference is mapped and rnext is unmapped (*) -> FALSE
-    """
-    read_reference = read.reference_id
-    rnext_reference = read.next_reference_id
-
-    read_mapped = read.is_mapped
-    rnext_mapped = read.mate_is_mapped
-
-    if read_mapped and rnext_mapped and read_reference != rnext_reference:
-        return True
-
-    return False
-
-def is_singleton(read: pysam.AlignedSegment) -> bool:
-    """
-    Check if read is a singleton alignment
-    """
-    if read.is_mapped and read.mate_is_unmapped:
-        return True
-    elif read.is_unmapped and read.mate_is_mapped:
-        return True
-    else:
-        return False
-
 
 class Quantification(object):
     def __init__(self, seq_table_file, bam_file, output_path, bp_dist, allow_mismatches, interval_mode, skip_singleton):
         self.seq_table_file = seq_table_file
         self.bam_file = bam_file
-        self.aligner = get_aligner(bam_file)
-        self.sorting = get_sorting(bam_file)
+        self.aln_obj = pysam.AlignmentFile(bam_file, "rb")
+        self.aligner = get_aligner(self.aln_obj)
+        self.sorting = get_sorting(self.aln_obj)
         self.output_path = os.path.abspath(output_path)
         self.quant_file = os.path.join(output_path, "quantification.tsv")
         self.reads_file = os.path.join(output_path, "read_info.tsv.gz")
@@ -259,7 +110,7 @@ class Quantification(object):
         self.allow_mismatches = allow_mismatches
         self.interval_mode = interval_mode
         self.skip_singleton = skip_singleton
-        self.seq_to_pos = get_seq_to_pos(seq_table_file)
+        self.seq_to_pos = get_seq_to_pos_dict(seq_table_file)
         self.counts, self.cov_dict = self.init_counts(self.seq_to_pos)
         self.parse_alignment()
         self.reads_out.close()
