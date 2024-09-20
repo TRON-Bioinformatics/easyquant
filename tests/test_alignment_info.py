@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import unittest
 
 import pysam
@@ -17,12 +18,16 @@ class TestAlignmentInfo(unittest.TestCase):
         # TODO: Mock alignment object
         self.aln_obj = pysam.AlignmentFile(BAM_FILE, "rb")
 
+
     def test_get_aligner(self):
         self.assertEqual(get_aligner(self.aln_obj), "star")
 
 
     def test_get_sorting(self):
-        self.assertEqual(get_sorting(self.aln_obj), "")
+        self.assertEqual(get_sorting(self.aln_obj), "unsorted")
+
+        self.assertEqual(get_sorting(self.aln_obj), "queryname")
+
 
     def test_is_chimeric(self):
         # Test that chimeric read is correctly identified
@@ -33,7 +38,7 @@ class TestAlignmentInfo(unittest.TestCase):
         read.reference_start = 32
         read.next_reference_id = 3
         self.assertTrue(is_chimeric_alignment(read))
-        
+
         # Check that aligned read with unmapped mapped is identified as valid alignment
         read = pysam.AlignedSegment()
         read.query_name = "read_28833_29006_6945"
@@ -52,8 +57,9 @@ class TestAlignmentInfo(unittest.TestCase):
         read.next_reference_id = 3
         self.assertFalse(is_chimeric_alignment(read))
 
+
     def test_is_singleton(self):
-        
+
         # Check that aligned read with unmapped mapped is identified as valid alignment
         read = pysam.AlignedSegment()
         read.query_name = "read_28833_29006_6945"

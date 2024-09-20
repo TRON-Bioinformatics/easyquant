@@ -1,6 +1,9 @@
+"""
+This module offers methods to convert a CSV file to the FASTA format
+to be able to further process it.
+"""
+
 import csv
-import logging
-import os
 import sys
 
 from Bio import SeqIO
@@ -11,8 +14,8 @@ csv.field_size_limit(sys.maxsize)
 
 def csv_to_fasta(csv_in, fasta_out):
     """This function converts the target sequences TSV/CSV file to the FASTA format."""
-    with open(fasta_out, "w") as fasta_handle, \
-         open(csv_in, "r", newline="\n") as csvfile:
+    with open(fasta_out, "w", encoding="utf8") as fasta_handle, \
+         open(csv_in, "r", newline="\n", encoding="utf8") as csvfile:
         # Auto detect dialect of input file
         dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=";,\t")
         csvfile.seek(0)
@@ -30,7 +33,7 @@ def csv_to_fasta(csv_in, fasta_out):
             sequences.append(record)
         SeqIO.write(sequences, fasta_handle, "fasta")
 
-    
+
 def add_csv_to_fasta_args(parser):
     """Add csv_to_fasta arguments to parser"""
     parser.add_argument(

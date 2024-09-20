@@ -12,6 +12,9 @@ example_out*
 *.Rproj
 
 .idea/
+.vscode/
 dist
 easy_quant.egg-info
 build
+
+*~
