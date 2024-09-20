@@ -7,9 +7,9 @@ import pysam
 from statistics import mean, median
 import sys
 
-from alignment_info import get_aligner, get_sorting, is_chimeric_alignment, is_singleton
-from read_classification import classify_read
-from seq_table import get_seq_to_pos_dict
+from bp_quant.alignment_info import get_aligner, get_sorting, is_chimeric_alignment, is_singleton
+from bp_quant.read_classification import classify_read
+from bp_quant.seq_table import get_seq_to_pos_dict
 
 csv.field_size_limit(sys.maxsize)
 
