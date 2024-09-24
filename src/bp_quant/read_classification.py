@@ -8,7 +8,7 @@ junc, within
 MATCH_BASES = ('A', 'C', 'G', 'T')
 
 
-def calc_anchor(aln_start: int, aln_end: int, ref_end: int):
+def calc_anchor(aln_start: int, aln_end: int, ref_end: int) -> int:
     """Calculates the overlap between alignment and reference stop position."""
 
     if aln_start < 0:
@@ -34,7 +34,6 @@ def get_query_pos(pos: int, aln_pairs: list) -> int:
         if r == pos:
             return q
     return -1
-    #return [q for (q, r, s) in aln_pairs if r == pos][0]
 
 
 def get_match_list(region_start: int, region_end: int, aln_pairs: list) -> list:
@@ -64,7 +63,7 @@ def check_for_indels(region_start: int, region_end: int, aln_pairs: list) -> boo
     q_start = get_query_pos(region_start, aln_pairs)
     q_end = get_query_pos(region_end, aln_pairs)
 
-    # check if boundary positions are aligned 
+    # check if boundary positions are aligned
     # and if the stretch length matches on read and reference
     ins_or_del = q_start and \
                     q_end and \
@@ -72,7 +71,7 @@ def check_for_indels(region_start: int, region_end: int, aln_pairs: list) -> boo
     return ins_or_del
 
 
-def get_read_type(bp_dist: int, anchor: int):
+def get_read_type(bp_dist: int, anchor: int) -> str:
     """Returns the read type based on anchor size."""
     # read overlaps junction area with at least 'bp_dist' bases
     if anchor >= bp_dist:
@@ -89,7 +88,7 @@ def get_read_type(bp_dist: int, anchor: int):
         return ""
 
 
-def classify_read(aln_start, aln_end, aln_pairs, intervals, bp_dist):
+def classify_read(aln_start, aln_end, aln_pairs, intervals, bp_dist) -> dict:
     """
     Classifies read and returns dict with information on mapping position
     """

@@ -1,2 +1,6 @@
-version_info = (0, 5, 5)
-version = '.'.join(str(c) for c in version_info)
+"""
+Version information stored in constants.
+"""
+
+VERSION_INFO = (0, 5, 5)
+VERSION = '.'.join(str(c) for c in VERSION_INFO)

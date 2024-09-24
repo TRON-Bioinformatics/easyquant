@@ -400,7 +400,11 @@ class Quantification:
         Write read counts to output file
         """
 
-        plot_reads_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plot_reads.py")
+        plot_reads_script = os.path.join(
+            os.path.dirname(
+                os.path.abspath(__file__)), 
+            "plot_reads.py"
+        )
         read_info_file = os.path.abspath(self.reads_file)
         seq_tab_file = os.path.abspath(seq_table_file)
         plotted_reads_pdf = os.path.join(self.output_path, "quantification.pdf")
@@ -483,7 +487,8 @@ def add_requantify_args(parser):
         "--allow_mismatches",
         dest="allow_mismatches",
         action="store_true",
-        help="Allow mismatches within the region around the breakpoint determined by the bp_distance parameter"
+        help="Allow mismatches within the region around the breakpoint \
+            determined by the bp_distance parameter"
     )
     parser.add_argument(
         "--interval_mode",
