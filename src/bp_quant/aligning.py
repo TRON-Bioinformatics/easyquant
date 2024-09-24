@@ -1,34 +1,66 @@
+"""
+This module generates the alignment commands depending on the input parameters.
+"""
+
 import subprocess
 
-def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params):
+def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params) -> str:
+    """Build up alignment command for bowtie2.
+
+    Args:
+        fq1 (str): Input FQ1 file
+        fq2 (str): Input FQ2 file
+        bam (str): Input BAM file
+        index_dir (str): Index path to use for processing
+        out_dir (str): Output directory where results are stored to
+        num_threads (int): Number of cpus to use for processing
+        custom_params (str): Custom parameters string to add to the final command
+
+    Returns:
+        str: command to be executed in the subprocess
+    """
     cmd=""
     if fq1 and fq2:
-        cmd = "bowtie2 -p {0} -x {1}/bowtie -a --end-to-end --no-discordant -1 {2} -2 {3} -S {4}/Aligned.out.sam {5}".format(
-            num_threads,
-            index_dir,
-            fq1,
-            fq2,
-            out_dir,
-            custom_params
-        )
+        cmd = f"bowtie2 \
+            -p {num_threads} \
+            -x {index_dir}/bowtie \
+            -a --end-to-end --no-discordant \
+            -1 {fq1} -2 {fq2} \
+            -S {out_dir}/Aligned.out.sam \
+            {custom_params}"
     elif not fq1 and not fq2 and bam:
-        cmd = "bowtie2 -p {0} -x {1}/bowtie -a --end-to-end --no-discordant -b {2} --align-paired-reads -S {3}/Aligned.out.sam {4}".format(
-            num_threads,
-            index_dir,
-            bam,
-            out_dir,
-            custom_params
-        ) 
+        cmd = f"bowtie2 \
+            -p {num_threads} \
+            -x {index_dir}/bowtie \
+            -a --end-to-end --no-discordant \
+            -b {bam} \
+            --align-paired-reads \
+            -S {out_dir}/Aligned.out.sam \
+            {custom_params}"
     return cmd
 
-def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params):
+def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params) -> str:
+    """Build up alignment command for STAR.
+
+    Args:
+        fq1 (str): Input FQ1 file
+        fq2 (str): Input FQ2 file
+        bam (str): Input BAM file
+        index_dir (str): Index path to use for processing
+        out_dir (str): Output directory where results are stored to
+        num_threads (int): Number of cpus to use for processing
+        custom_params (str): Custom parameters string to add to the final command
+
+    Returns:
+        str: command to be executed in the subprocess
+    """
     cmd = ""
     if fq1 and fq2:
-        cmd = "STAR --outFileNamePrefix {0} \
+        cmd = f"STAR --outFileNamePrefix {out_dir}/ \
         --limitOutSAMoneReadBytes 1000000 \
-        --genomeDir {1} \
+        --genomeDir {index_dir} \
         --readFilesCommand 'gzip -d -c -f' \
-        --readFilesIn {2} {3} \
+        --readFilesIn {fq1} {fq2} \
         --outSAMmode Full \
         --alignEndsType EndToEnd \
         --outFilterMultimapNmax -1 \
@@ -36,23 +68,16 @@ def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_pa
         --outSAMunmapped Within KeepPairs \
         --outFilterScoreMinOverLread 0.3 \
         --outFilterMatchNminOverLread 0.3 \
-        {4} \
-        --runThreadN {5}".format(
-            out_dir + "/",
-            index_dir,
-            fq1,
-            fq2,
-            custom_params,
-            num_threads
-        )
+        {custom_params} \
+        --runThreadN {num_threads}"
     elif not fq1 and not fq2 and bam:
-        cmd = "STAR --outFileNamePrefix {0} \
+        cmd = f"STAR --outFileNamePrefix {out_dir}/ \
         --runMode alignReads \
         --limitOutSAMoneReadBytes 1000000 \
-        --genomeDir {1} \
+        --genomeDir {index_dir} \
         --readFilesType SAM PE \
         --readFilesCommand 'samtools view' \
-        --readFilesIn {2} \
+        --readFilesIn {bam} \
         --bamRemoveDuplicatesType UniqueIdenticalNotMulti \
         --outSAMmode Full \
         --alignEndsType EndToEnd \
@@ -61,27 +86,40 @@ def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_pa
         --outSAMunmapped Within KeepPairs \
         --outFilterScoreMinOverLread 0.3 \
         --outFilterMatchNminOverLread 0.3 \
-        {3} \
-        --runThreadN {4}".format(
-            out_dir + "/",
-            index_dir,
-            bam,
-            custom_params,
-            num_threads
-        )
+        {custom_params} \
+        --runThreadN {num_threads}"
     return cmd
 
 
-def run(fq1, fq2, bam, index_dir, out_path, threads, method, params):
+def run(fq1, fq2, bam, index_dir, out_dir, threads, method, params):
+    """Build up and run alignment command for the specified aligner.
+
+    Args:
+        fq1 (str): Input FQ1 file
+        fq2 (str): Input FQ2 file
+        bam (str): Input BAM file
+        index_dir (str): Index path to use for processing
+        out_dir (str): Output directory where results are stored to
+        threads (int): Number of cpus to use for processing
+        params (str): Custom parameters string to add to the final command
+
+    Returns:
+        str: command to be executed in the subprocess
+    """
     cmd = None
     if method == "bowtie2":
-        cmd = get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_path, threads, params)
+        cmd = get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, threads, params)
     elif method == "star":
-        cmd = get_align_cmd_star(fq1, fq2, bam, index_dir, out_path, threads, params)
+        cmd = get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, threads, params)
     print(cmd)
-    subprocess.run(cmd, shell=True, cwd=out_path)
+    subprocess.run(cmd, shell=True, cwd=out_dir, check=None)
 
 def add_aligner_args(parser):
+    """Add parser arguments.
+
+    Args:
+        parser (obj): Command line parser object to use
+    """
     parser.add_argument(
         "-1",
         "--fq1",
@@ -109,8 +147,8 @@ def add_aligner_args(parser):
     )
     parser.add_argument(
         "-o",
-        "--output_path",
-        dest="output_path",
+        "--output_dir",
+        dest="output_dir",
         help="Specify path to output file/folder",
         required=True
     )
@@ -139,13 +177,18 @@ def add_aligner_args(parser):
     parser.set_defaults(func=alignment_command)
 
 
-def alignment_command(args):
+def alignment_command(args) -> None:
+    """Run command with command line arguments.
+
+    Args:
+        args (obj): Command line arguments
+    """
     run(
         fq1=args.fq1,
         fq2=args.fq2,
         bam=args.bam,
         index_dir=args.index_dir,
-        out_path=args.output_path,
+        out_dir=args.output_dir,
         threads=args.threads,
         method=args.method,
         params=args.params

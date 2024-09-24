@@ -7,7 +7,7 @@ import logging
 import os
 
 import bp_quant.io_methods as IOMethods
-from bp_quant.version import version
+from bp_quant.version import VERSION
 
 
 
@@ -56,7 +56,7 @@ class Pipeline:
 
         with open(os.path.join(self.working_dir, "run_command.sh"), "w", encoding="utf8") as outf:
             outf.write("#!/bin/sh\n\n")
-            outf.write(f"version=\"{version}\"\n")
+            outf.write(f"version=\"{VERSION}\"\n")
             outf.write(f"python {os.path.realpath(__file__)} \\\n")
             if self.fq1 and self.fq2:
                 outf.write(f"-1 {self.fq1} \\\n")
@@ -78,7 +78,7 @@ class Pipeline:
                 outf.write(align_cmd_params)
 
 
-        logging.info("Executing bpquant %s", version)
+        logging.info("Executing bpquant %s", VERSION)
         if self.fq1 and self.fq2:
             logging.info("FQ1=%s", self.fq1)
             logging.info("FQ2=%s", self.fq2)
@@ -100,7 +100,7 @@ class Pipeline:
             clean_up_files.append(cram_file)
             clean_up_files.append(f"{cram_file}.crai")
             clean_up_files.append(fasta_file)
-        
+
         #create folders
         IOMethods.create_folder(align_path)
 
@@ -152,7 +152,7 @@ class Pipeline:
                 f"{align_path}/_STARtmp",
             ])
 
-            
+
         sam_to_cram_cmd = f"samtools sort \
             -@ {num_threads} \
             -m 2G \
@@ -184,7 +184,7 @@ class Pipeline:
         clean_cmd = f"for file in {clean_up_files_str}; \
             do rm -rf $file; done"
 
-        # define bash script in working directory    
+        # define bash script in working directory
         shell_script = os.path.join(self.working_dir, "requant.sh")
         # start to write shell script to execute mapping cmd
         with open(shell_script, "w", encoding="utf8") as out_shell:
@@ -223,7 +223,7 @@ class Pipeline:
         if self.keep_aln or self.keep_all:
             if not os.path.exists(cram_file) or os.stat(cram_file).st_size == 0:
                 IOMethods.execute_cmd(sam_to_cram_cmd)
-            
+
         if not self.keep_all:
             IOMethods.execute_cmd(clean_cmd)
 
