@@ -47,9 +47,10 @@ def get_read_count(infile: str, input_format: str) -> int:
 
 def get_read_count_fq(fq_file: str) -> int:
     """Parses input FASTQ to get read count"""
-    ps = subprocess.Popen(("zcat", fq_file), stdout=subprocess.PIPE)
-    result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
-    return int(int(result) / 4)
+    with subprocess.Popen(("zcat", "-f", fq_file), stdout=subprocess.PIPE) as ps:
+        result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
+        return int(int(result) / 4)
+    return 0
 
 
 def get_read_count_bam(bam_file: str) -> int:
