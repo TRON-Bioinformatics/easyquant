@@ -44,8 +44,8 @@ class TestReadProcessing(unittest.TestCase):
         Test case for read counting in a BAM file.
         """
 
-        with open("test.sam", "w", encoding="utf8") as outf:
-            outf.write("@HD\tVN:1.5\tSO:unsorted\tGO:query\t@SQ\tSN:c42c085fa5d881fdd75aad0467853d8e\tLN:800\n")
-            outf.write("A00259:290:HKKM5DMXY:1:1266:18267:23735 99      0ef1d60df2e9ba9378f54b4ee3d7da0f        190     1       100M    =       237     147           CTCAGTGGCACACTTCACATTGAAGATGCAGCTGTGCCAGGCGCACAGGAAGCTCTTAAAAGGAATACAAACAAGTGATCCTAATGCTGTGGTCATGGGA    FFFFFFFFFFFFFFFFFFFFFFFFF,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF  AS:i:0  XS:i:0  XN:i:0  XM:i:0  XO:i:0  XG:i:0  NM:i:0        MD:Z:100        YS:i:0  YT:Z:CP\n")
-
-        self.assertEqual(get_read_count_bam("test.sam"), 1)
+        with tempfile.NamedTemporaryFile() as temp:
+            temp.write("@HD\n")
+            temp.write("test_read 99 XY 190 1 100M = 237 147 ACGT FFFF\n")
+            temp.read()
+            self.assertEqual(get_read_count_bam("test.sam"), 1)
