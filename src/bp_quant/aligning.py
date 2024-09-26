@@ -2,7 +2,8 @@
 This module generates the alignment commands depending on the input parameters.
 """
 
-import subprocess
+
+import bp_quant.io_methods as IOMethods
 
 def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params) -> str:
     """Build up alignment command for bowtie2.
@@ -111,8 +112,9 @@ def run(fq1, fq2, bam, index_dir, out_dir, threads, method, params):
         cmd = get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, threads, params)
     elif method == "star":
         cmd = get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, threads, params)
-    print(cmd)
-    subprocess.run(cmd, shell=True, cwd=out_dir, check=None)
+    #print(cmd)
+    IOMethods.execute_cmd(cmd)
+    #subprocess.run(cmd, shell=True, cwd=out_dir, check=None)
 
 def add_aligner_args(parser):
     """Add parser arguments.

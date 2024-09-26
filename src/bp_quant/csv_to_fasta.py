@@ -6,9 +6,10 @@ to be able to further process it.
 import csv
 import sys
 
-from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
+# pylint: disable=E0401
+from Bio import SeqIO # type: ignore
+from Bio.Seq import Seq # type: ignore
+from Bio.SeqRecord import SeqRecord # type: ignore
 
 csv.field_size_limit(sys.maxsize)
 

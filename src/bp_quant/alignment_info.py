@@ -2,7 +2,8 @@
 Alignment module based on pysam.
 """
 
-import pysam
+# pylint: disable=E0401
+import pysam # type: ignore
 
 def get_aligner(alignment: pysam.AlignmentFile) -> str:
     """

@@ -88,10 +88,11 @@ def get_read_type(bp_dist: int, anchor: int) -> str:
         return ""
 
 
-def classify_read(aln_start, aln_end, aln_pairs, intervals, bp_dist) -> dict:
+def classify_read(aln_pairs, intervals, bp_dist) -> dict:
     """
     Classifies read and returns dict with information on mapping position
     """
+
 
     read_info = {
         "class": "unclassified", 
@@ -102,13 +103,15 @@ def classify_read(aln_start, aln_end, aln_pairs, intervals, bp_dist) -> dict:
         "contains_snp_or_indel_in_bp_area": False
     }
 
+    aln_start = aln_pairs[0][1]
+    aln_end = aln_pairs[-1][1] + 1
+
     if aln_start < 0:
         return read_info
     # Can we extract start and stop position of alignment
     # from aln_pairs to remove redundancy?
     num_mismatches_total = count_mismatches_in_region(aln_start, aln_end, aln_pairs)
-    #aln_start = get_query_start_or_end(0, aln_pairs)
-    #aln_stop = get_query_start_or_end(0, aln_pairs)
+
 
     for (interval_name, _, ref_end) in intervals:
 
