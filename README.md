@@ -52,10 +52,8 @@ pip install dist/*.whl
 ## Usage
 
 ```
-usage: bp_quant pipeline [-h] [-1 FQ1] [-2 FQ2] [-b BAM] -s SEQ_TAB -o
-                         OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
-                         [--interval_mode] [-m {star,bowtie2,bwa}]
-                         [-t NUM_THREADS] [--star_cmd_params STAR_CMD_PARAMS]
+usage: bp_quant pipeline [-h] [-1 FQ1] [-2 FQ2] [-b BAM] -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches]
+                         [--interval_mode] [-m {star,bowtie2}] [-t NUM_THREADS] [--alignment_params ALIGN_PARAMS]
                          [--keep_aln | --keep_all]
 
 Runs the complete bpquant pipeline
@@ -65,31 +63,26 @@ optional arguments:
   -1 FQ1, --fq1 FQ1     Specify path to Read 1 (R1) FASTQ file
   -2 FQ2, --fq2 FQ2     Specify path to Read 2 (R2) FASTQ file
   -b BAM, --bam_file BAM
-                        Specify path to input BAM file as alternative to FASTQ
-                        input
+                        Specify path to input BAM file as alternative to FASTQ input
   -s SEQ_TAB, --sequence_tab SEQ_TAB
-                        Specify the reference sequences as table with colums
-                        name, sequence, and position
+                        Specify the reference sequences as table with colums name, sequence, and position
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         Specify the folder to save the results into.
   -d BP_DISTANCE, --bp_distance BP_DISTANCE
-                        Threshold in base pairs for the required overlap size
-                        of reads on both sides of the breakpoint for
+                        Threshold in base pairs for the required overlap size of reads on both sides of the breakpoint for
                         junction/spanning read counting
-  --allow_mismatches    Allow mismatches within the region around the
-                        breakpoint determined by the bp_distance parameter
+  --allow_mismatches    Allow mismatches within the region around the breakpoint determined by the bp_distance parameter
   --interval_mode       Specify if interval mode shall be used
-  -m {star,bowtie2,bwa}, --method {star,bowtie2,bwa}
+  -m {star,bowtie2}, --method {star,bowtie2}
                         Specify alignment software to generate the index
   -t NUM_THREADS, --threads NUM_THREADS
                         Specify number of threads to use for the alignment
-  --star_cmd_params STAR_CMD_PARAMS
-                        Specify STAR commandline parameters to use for the
-                        alignment
+  --alignment_params ALIGN_PARAMS
+                        Specify custom commandline parameters to use for the alignment
   --keep_aln            Do not delete alignment files during clean up step
   --keep_all            Do not perform clean up step after re-quantification
 
-Copyright (c) 2023 TRON gGmbH (See LICENSE for licensing details)
+Copyright (c) 2024 TRON gGmbH (See LICENSE for licensing details)
 ```
 
 ### Use case with example data
