@@ -63,7 +63,7 @@ class Quantification:
             sys.exit(1)
 
 
-    def increment_counts(self, seq_name, read_counts):
+    def increment_counts(self, seq_name: str, read_counts: dict) -> None:
         """Increments counts for a single read pair."""
         if self.interval_mode:
             for interval_name in read_counts:
@@ -74,13 +74,13 @@ class Quantification:
                 self.counts[seq_name][key] = val
 
 
-    def update_coverage(self, aln_pairs, seq_name, interval_name):
-        """_summary_
+    def update_coverage(self, aln_pairs: list, seq_name: str, interval_name: str) -> None:
+        """Updates the coverage dictionary with the read info.
 
         Args:
-            aln_pairs (_type_): _description_
-            seq_name (_type_): _description_
-            interval_name (_type_): _description_
+            aln_pairs (list): Per-base mapping of aligned segment
+            seq_name (str): Name of the reference sequence
+            interval_name (str): Name of the interval
         """
 
         ref_start, ref_end = interval_name.split("_")
@@ -89,7 +89,7 @@ class Quantification:
                 self.cov_dict[seq_name][interval_name][r] += 1
 
 
-    def process_reads(self, all_alignments_of_query_name):
+    def process_reads(self, all_alignments_of_query_name) -> None:
         """
         Process and quantify all alignments of read pair
         """
@@ -184,7 +184,7 @@ class Quantification:
             self.increment_counts(seq_name, read_counts)
 
 
-    def parse_alignment(self, aln_handle):
+    def parse_alignment(self, aln_handle: pysam.AlignmentFile) -> None:
         """
         Parses alignment and iterates over each read while quantifying it.
         """

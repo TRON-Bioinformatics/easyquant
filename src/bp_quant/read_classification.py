@@ -78,17 +78,17 @@ def get_read_type(bp_dist: int, anchor: int) -> str:
         return "junc"
 
     # read overlaps junction area with less than 'bp_dist' bases
-    elif 0 < anchor < bp_dist:
+    if 0 < anchor < bp_dist:
         return "softjunc"
 
     # read maps completely within the interval
-    elif anchor == 0:
+    if anchor == 0:
         return "within"
-    else:
-        return ""
+
+    return ""
 
 
-def classify_read(aln_pairs, intervals, bp_dist) -> dict:
+def classify_read(aln_pairs: list, intervals: list, bp_dist: int) -> dict:
     """
     Classifies read and returns dict with information on mapping position
     """
@@ -111,7 +111,6 @@ def classify_read(aln_pairs, intervals, bp_dist) -> dict:
     # Can we extract start and stop position of alignment
     # from aln_pairs to remove redundancy?
     num_mismatches_total = count_mismatches_in_region(aln_start, aln_end, aln_pairs)
-
 
     for (interval_name, _, ref_end) in intervals:
 
@@ -141,7 +140,7 @@ def classify_read(aln_pairs, intervals, bp_dist) -> dict:
     return None
 
 
-def is_spanning_pair(r1_class, r1_interval, r2_class, r2_interval):
+def is_spanning_pair(r1_class: str, r1_interval: str, r2_class: str, r2_interval: str) -> bool:
     """Check if r1 and r2 form a spanning pair."""
     if (r1_class == "within" and
         r2_class == "within" and

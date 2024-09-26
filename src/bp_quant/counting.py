@@ -69,17 +69,17 @@ def get_spanning_intervals(intervals: list, r1_interval: str, r2_interval: str) 
 
 
 def count_reads_interval_mode(r1_info: dict, r2_info: dict,
-                              intervals: dict, allow_mm: bool) -> dict:
-    """_summary_
+                              intervals: list, allow_mm: bool) -> dict:
+    """Counts the reads based on their info in interval mode.
 
     Args:
-        r1_info (_type_): _description_
-        r2_info (_type_): _description_
-        intervals (_type_): _description_
-        allow_mm (_type_): _description_
+        r1_info (dict): Information on Read 1 of pair
+        r2_info (dict): Information on Read 2 of pair
+        intervals (dict): Dict with intervals
+        allow_mm (bool): Select if mismatches are allowed
 
     Returns:
-        dict: _description_
+        dict: Read counts for one read pair
     """
     read_counts = {}
     for (interval_name, _, _) in intervals:
@@ -123,18 +123,17 @@ def count_reads_interval_mode(r1_info: dict, r2_info: dict,
 
 
 def count_reads_regular_mode(r1_info: dict, r2_info: dict,
-                             intervals: dict, allow_mm: bool) -> dict:
-    """_summary_
+                             intervals: list, allow_mm: bool) -> dict:
+    """Counts reads based on their info in regular mode.
 
     Args:
-        r1_info (dict): _description_
-        r2_info (dict): _description_
-        left_interval (str): _description_
-        right_interval (str): _description_
-        allow_mm (bool): _description_
+        r1_info (dict): Information on Read 1 of pair
+        r2_info (dict): Information on Read 2 of pair
+        intervals (dict): Dict with intervals
+        allow_mm (bool): Select if mismatches are allowed
 
     Returns:
-        dict: _description_
+        dict: Read counts for one read pair
     """
     left_interval = intervals[0][0]
     right_interval = intervals[1][0]
@@ -182,23 +181,22 @@ def count_reads_regular_mode(r1_info: dict, r2_info: dict,
 
 
 def count_reads(r1_info: dict, r2_info: dict,
-                intervals: dict, allow_mm: bool, interval_mode: bool) -> dict:
-    """_summary_
+                intervals: list, allow_mm: bool, interval_mode: bool) -> dict:
+    """Counts reads based on their info.
 
     Args:
-        r1_info (dict): _description_
-        r2_info (dict): _description_
-        intervals (dict): _description_
-        allow_mm (bool): _description_
-        interval_mode (bool): _description_
+        r1_info (dict): Information on Read 1 of pair
+        r2_info (dict): Information on Read 2 of pair
+        intervals (dict): Dict with intervals
+        allow_mm (bool): Select if mismatches are allowed
+        interval_mode (bool): Select if interval mode is used
 
     Returns:
-        dict: _description_
+        dict: Read counts for one read pair
     """
     if interval_mode:
         return count_reads_interval_mode(r1_info, r2_info, intervals, allow_mm)
-    else:
-        return count_reads_regular_mode(r1_info, r2_info, intervals, allow_mm)
+    return count_reads_regular_mode(r1_info, r2_info, intervals, allow_mm)
 
 
 def calc_coverage(seq_to_pos: dict, cov_dict: dict, counts: dict) -> dict:
