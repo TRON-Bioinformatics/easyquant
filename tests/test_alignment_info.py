@@ -34,8 +34,6 @@ class TestAlignmentInfo(unittest.TestCase):
         """Test get_sorting."""
         self.assertEqual(get_sorting(self.aln_obj), "unsorted")
 
-        self.assertEqual(get_sorting(self.aln_obj), "queryname")
-
 
     def test_is_chimeric(self):
         """Test is_chimeric."""
