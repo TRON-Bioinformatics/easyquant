@@ -36,22 +36,23 @@ def execute_cmd(cmd: str, working_dir = ".") -> bool:
     return True
 
 
-def get_read_count(infile, input_format="fq") -> int:
+def get_read_count(infile: str, input_format: str) -> int:
     """Returns the read count from the input file."""
     if input_format == "fq":
         return get_read_count_fq(infile)
-    elif input_format == "bam":
+    if input_format == "bam":
         return get_read_count_bam(infile)
+    return 0
 
 
-def get_read_count_fq(fq_file) -> int:
+def get_read_count_fq(fq_file: str) -> int:
     """Parses input FASTQ to get read count"""
     ps = subprocess.Popen(("zcat", fq_file), stdout=subprocess.PIPE)
     result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
     return int(int(result) / 4)
 
 
-def get_read_count_bam(bam_file) -> int:
+def get_read_count_bam(bam_file: str) -> int:
     """Parses input BAM to get read count"""
     result = subprocess.check_output(["samtools", "view", "-c", bam_file])
     return int(result)
