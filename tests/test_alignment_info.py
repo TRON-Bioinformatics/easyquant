@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 
+"""
+This module contains tests for alignment info gathering.
+"""
+
 import os
 import unittest
 
-import pysam
+# pylint: disable=E0401
+import pysam # type: ignore
 
 from bp_quant.alignment_info import get_aligner
 from bp_quant.alignment_info import get_sorting
@@ -13,6 +18,7 @@ from bp_quant.alignment_info import is_singleton
 BAM_FILE = os.path.join("example_data", "example_rna-seq.bam")
 
 class TestAlignmentInfo(unittest.TestCase):
+    """Provides unit tests for IO module."""
 
     def setUp(self):
         # TODO: Mock alignment object
@@ -20,16 +26,19 @@ class TestAlignmentInfo(unittest.TestCase):
 
 
     def test_get_aligner(self):
+        """Test get_aligner."""
         self.assertEqual(get_aligner(self.aln_obj), "star")
 
 
     def test_get_sorting(self):
+        """Test get_sorting."""
         self.assertEqual(get_sorting(self.aln_obj), "unsorted")
 
         self.assertEqual(get_sorting(self.aln_obj), "queryname")
 
 
     def test_is_chimeric(self):
+        """Test is_chimeric."""
         # Test that chimeric read is correctly identified
         read = pysam.AlignedSegment()
         read.query_name = "read_28833_29006_6945"
@@ -59,6 +68,7 @@ class TestAlignmentInfo(unittest.TestCase):
 
 
     def test_is_singleton(self):
+        """Test is_singleton."""
 
         # Check that aligned read with unmapped mapped is identified as valid alignment
         read = pysam.AlignedSegment()

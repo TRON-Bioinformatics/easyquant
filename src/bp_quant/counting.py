@@ -16,7 +16,14 @@ def init_count_dict(seq_to_pos: dict, interval_mode: bool) -> dict:
             counts[seq_name] = {}
             for interval_name, _, _ in seq_to_pos[seq_name][0]:
                 # junc, span_read, within, coverage_%, coverage_mean, coverage_median
-                counts[seq_name][interval_name] = [0, 0, 0, 0, 0, 0]
+                counts[seq_name][interval_name] = {
+                    "overlap_interval_end_reads": 0,
+                    "span_interval_end_pairs": 0,
+                    "within_interval": 0,
+                    "coverage_perc": 0.0,
+                    "coverage_mean": 0.0,
+                    "coverage_median": 0.0
+                }
         else:
             if len(seq_to_pos[seq_name]) > 2:
                 logging.error("Specified too many positions of interest \
@@ -24,7 +31,13 @@ def init_count_dict(seq_to_pos: dict, interval_mode: bool) -> dict:
                 logging.error("Please check your input file or use interval mode!")
                 sys.exit(1)
 
-            counts[seq_name] = [0, 0, 0, 0, 0]
+            counts[seq_name] = {
+                "junc": 0,
+                "span": 0,
+                "anch": 0,
+                "a": 0,
+                "b": 0
+            }
 
     return counts
 
@@ -43,6 +56,151 @@ def init_cov_dict(seq_to_pos: dict) -> dict:
     return cov_dict
 
 
+def get_spanning_intervals(intervals: list, r1_interval: str, r2_interval: str) -> list:
+    """Returns the intervals the spanning pair uses."""
+    start = False
+    spanning_intervals = []
+    for (interval_name, _, _) in intervals:
+        if interval_name in (r1_interval, r2_interval):
+            start = not start
+        if start:
+            spanning_intervals.append(interval_name)
+    return spanning_intervals
+
+
+def count_reads_interval_mode(r1_info: dict, r2_info: dict,
+                              intervals: dict, allow_mm: bool) -> dict:
+    """_summary_
+
+    Args:
+        r1_info (_type_): _description_
+        r2_info (_type_): _description_
+        intervals (_type_): _description_
+        allow_mm (_type_): _description_
+
+    Returns:
+        dict: _description_
+    """
+    read_counts = {}
+    for (interval_name, _, _) in intervals:
+        read_counts[interval_name] = {
+            "overlap_interval_end_reads": 0,
+            "span_interval_end_pairs": 0,
+            "within_interval": 0
+        }
+
+    if r1_info["interval"]:
+        interval_name = r1_info["interval"]
+        # Check if reads are junction reads
+        if r1_info["class"] == "junc":
+            if not r1_info["contains_snp_or_indel_in_bp_area"] or allow_mm:
+                read_counts[interval_name]["overlap_interval_end_reads"] += 1
+
+        if r1_info["class"] in ("within", "span"):
+            read_counts[interval_name]["within_interval"] += 1
+
+    if r2_info["interval"]:
+        interval_name = r2_info["interval"]
+        if r2_info["class"] == "junc":
+            if not r2_info["contains_snp_or_indel_in_bp_area"] or allow_mm:
+                read_counts[interval_name]["overlap_interval_end_reads"] += 1
+
+        if r2_info["class"] in ("within", "span"):
+            read_counts[interval_name]["within_interval"] += 1
+
+
+    # Count spanning pairs individually
+    if r1_info["class"] == "span" and r2_info["class"] == "span":
+        spanning_intervals = get_spanning_intervals(
+            intervals,
+            r1_info["interval"],
+            r2_info["interval"]
+        )
+        for interval_name in spanning_intervals:
+            read_counts[interval_name]["span_interval_end_pairs"] += 1
+
+    return read_counts
+
+
+def count_reads_regular_mode(r1_info: dict, r2_info: dict,
+                             intervals: dict, allow_mm: bool) -> dict:
+    """_summary_
+
+    Args:
+        r1_info (dict): _description_
+        r2_info (dict): _description_
+        left_interval (str): _description_
+        right_interval (str): _description_
+        allow_mm (bool): _description_
+
+    Returns:
+        dict: _description_
+    """
+    left_interval = intervals[0][0]
+    right_interval = intervals[1][0]
+
+    read_counts = {
+        "junc": 0,
+        "span": 0,
+        "a": 0,
+        "b": 0
+    }
+    if r1_info["interval"]:
+        interval_name = r1_info["interval"]
+
+        # Check if reads are junction reads
+        if r1_info["class"] == "junc":
+            if not r1_info["contains_snp_or_indel_in_bp_area"] or allow_mm:
+                read_counts["junc"] += 1
+
+        if r1_info["class"] in ("within", "span"):
+            if interval_name == left_interval:
+                read_counts["a"] += 1
+            elif interval_name == right_interval:
+                read_counts["b"] += 1
+
+
+    if r2_info["interval"]:
+        interval_name = r2_info["interval"]
+
+        if r2_info["class"] == "junc":
+            if not r2_info["contains_snp_or_indel_in_bp_area"] or allow_mm:
+                read_counts["junc"] += 1
+
+        if r2_info["class"] in ("within", "span"):
+            if interval_name == left_interval:
+                read_counts["a"] += 1
+            elif interval_name == right_interval:
+                read_counts["b"] += 1
+
+
+    # Count spanning pairs individually
+    if r1_info["class"] == "span" and r2_info["class"] == "span":
+        read_counts["span"] += 1
+
+    return read_counts
+
+
+def count_reads(r1_info: dict, r2_info: dict,
+                intervals: dict, allow_mm: bool, interval_mode: bool) -> dict:
+    """_summary_
+
+    Args:
+        r1_info (dict): _description_
+        r2_info (dict): _description_
+        intervals (dict): _description_
+        allow_mm (bool): _description_
+        interval_mode (bool): _description_
+
+    Returns:
+        dict: _description_
+    """
+    if interval_mode:
+        return count_reads_interval_mode(r1_info, r2_info, intervals, allow_mm)
+    else:
+        return count_reads_regular_mode(r1_info, r2_info, intervals, allow_mm)
+
+
 def calc_coverage(seq_to_pos: dict, cov_dict: dict, counts: dict) -> dict:
     """Calculates the coverage using the values in the coverage dictionary."""
     for seq_name in seq_to_pos:
@@ -58,18 +216,3 @@ def calc_coverage(seq_to_pos: dict, cov_dict: dict, counts: dict) -> dict:
             counts[seq_name][interval_name][5] = cov_median
 
     return counts
-
-
-def get_spanning_intervals(intervals: list, r1_interval: str, r2_interval: str) -> list:
-    """Returns the intervals the spanning pair uses."""
-    start = False
-    spanning_intervals = []
-    for (interval_name, _, _) in intervals:
-        if interval_name == r1_interval or interval_name == r2_interval:
-            if not start:
-                start = True
-            else:
-                start = False
-        if start:
-            spanning_intervals.append(interval_name)
-    return spanning_intervals

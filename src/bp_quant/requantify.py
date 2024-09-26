@@ -7,16 +7,21 @@ and reports them into result files.
 
 import gzip
 import logging
-import os
+from os.path import abspath
+from os.path import dirname
+from os.path import join as join_path
 import sys
 
-import pysam
+# pylint: disable=E0401
+import pysam # type: ignore
 
 
 from bp_quant.alignment_info import get_aligner, get_sorting, is_chimeric_alignment, is_singleton
-from bp_quant.counting import init_count_dict, init_cov_dict, calc_coverage, get_spanning_intervals
-
+from bp_quant.counting import init_count_dict, init_cov_dict, calc_coverage
+from bp_quant.counting import count_reads
 from bp_quant.file_handler import write_line_to_file
+from bp_quant.file_handler import save_plot_script
+from bp_quant.file_handler import save_counts
 import bp_quant.file_headers as headers
 from bp_quant.read_classification import classify_read, is_spanning_pair
 from bp_quant.read_processing import process_secondary_alignments
@@ -30,16 +35,17 @@ logger = logging.getLogger(__name__)
 
 class Quantification:
     """Quantification class"""
-    def __init__(self, seq_table_file, bam_file, output_path, bp_dist, allow_mismatches, interval_mode, skip_singleton):
+    def __init__(self, seq_table_file, bam_file, output_path,
+                 bp_dist, allow_mismatches, interval_mode, skip_singleton):
         self.bam_file = bam_file
-        self.aln_obj = pysam.AlignmentFile(bam_file, "rb")
-        self.aligner = get_aligner(self.aln_obj)
-        self.sorting = get_sorting(self.aln_obj)
-        self.output_path = os.path.abspath(output_path)
-        self.quant_file = os.path.join(output_path, "quantification.tsv")
-        self.reads_file = os.path.join(output_path, "read_info.tsv.gz")
-        self.reads_out = gzip.open(self.reads_file, "wb")
-        self.reads_out.write(("\t".join(headers.READ_INFO_HEADER) + "\n").encode())
+        aln_obj = pysam.AlignmentFile(bam_file, "rb")
+        self.aligner = get_aligner(aln_obj)
+        self.seq_tab_file = seq_table_file
+        self.output_path = abspath(output_path)
+        self.quant_file = join_path(output_path, "quantification.tsv")
+        self.read_info_file = join_path(output_path, "read_info.tsv.gz")
+        self.read_info_out = gzip.open(self.read_info_file, "wb")
+        self.read_info_out.write(("\t".join(headers.READ_INFO_HEADER) + "\n").encode())
         self.bp_dist = bp_dist
         self.allow_mismatches = allow_mismatches
         self.interval_mode = interval_mode
@@ -47,13 +53,40 @@ class Quantification:
         self.seq_to_pos = get_seq_to_pos_dict(seq_table_file)
         self.counts = init_count_dict(self.seq_to_pos, self.interval_mode)
         self.cov_dict = init_cov_dict(self.seq_to_pos)
-        self.parse_alignment()
-        self.reads_out.close()
-        self.write_results(seq_table_file)
+        self.parse_alignment(aln_obj)
+        self.read_info_out.close()
+        self.write_results()
 
-        if not self.sorting in ['unsorted', 'queryname']:
+        sorting = get_sorting(aln_obj)
+        if not sorting in ['unsorted', 'queryname']:
             logger.error('Requantification requires queryname sorted SAM file.')
             sys.exit(1)
+
+
+    def increment_counts(self, seq_name, read_counts):
+        """Increments counts for a single read pair."""
+        if self.interval_mode:
+            for interval_name in read_counts:
+                for (key, val) in read_counts[interval_name].items():
+                    self.counts[seq_name][interval_name][key] += val
+        else:
+            for (key, val) in read_counts.items():
+                self.counts[seq_name][key] = val
+
+
+    def update_coverage(self, aln_pairs, seq_name, interval_name):
+        """_summary_
+
+        Args:
+            aln_pairs (_type_): _description_
+            seq_name (_type_): _description_
+            interval_name (_type_): _description_
+        """
+
+        ref_start, ref_end = interval_name.split("_")
+        for (q, r, _) in aln_pairs:
+            if q and r and int(ref_start) <= r < int(ref_end):
+                self.cov_dict[seq_name][interval_name][r] += 1
 
 
     def process_reads(self, all_alignments_of_query_name):
@@ -87,11 +120,11 @@ class Quantification:
             qname = read.query_name
             unmapped = read.is_unmapped
             start = -1
-            stop = -1
+            end = -1
             pairs = None
             if not unmapped:
                 start = read.reference_start
-                stop = read.reference_end
+                end = read.reference_end
                 pairs = None
                 try:
                     pairs = read.get_aligned_pairs(with_seq=True)
@@ -106,17 +139,17 @@ class Quantification:
                 "flag": read.flag,
                 "cigar": read.cigarstring,
                 "start": start,
-                "stop": stop,
+                "end": end,
                 "pairs": pairs
             }
             if read.is_secondary and self.aligner == "bowtie2":
-                # Create dictionary for secondary alignments from bowtie2 
+                # Create dictionary for secondary alignments from bowtie2
                 # to bring them into a format that can be processed
                 if read.reference_name not in secondary_dict:
                     secondary_dict[read.reference_name] = {}
                 if read.query_name not in secondary_dict[read.reference_name]:
                     secondary_dict[read.reference_name][read.query_name] = {"R1": [], "R2": []}
-                
+
                 if read_dict["first_in_pair"]:
                     secondary_dict[read.reference_name][read.query_name]["R1"].append(read_dict)
                 else:
@@ -127,19 +160,17 @@ class Quantification:
                     r1 = read_dict
                 else:
                     r2 = read_dict
-                
 
             if r1 and r2:
-                # Ignore unmapped read pairs and read pairs 
+                # Ignore unmapped read pairs and read pairs
                 # with unmatching reference or read name
-                # TODO: Check if unmapped reference is '*'
-                # and therefore needs more relaxed clause
                 if not (r1["unmapped"] and r2["unmapped"] or
                     r1["query_name"] != r2["query_name"]):
                     if (r1["reference_name"] == r2["reference_name"] or
                         r1["unmapped"] and not r2["unmapped"] or
                         not r1["unmapped"] and r2["unmapped"]):
-                        self.quantify(r1, r2)
+                        (seq_name, read_counts) = self.quantify(r1, r2)
+                        self.increment_counts(seq_name, read_counts)
                 elif r1["query_name"] != r2["query_name"]:
                     print("MISMATCHING QUERY NAME!", r1, r2)
                     break
@@ -149,24 +180,22 @@ class Quantification:
         read_pairings = process_secondary_alignments(secondary_dict)
         for r1, r2 in read_pairings:
             # return counts for single read pair and add them up accordingly
-            self.quantify(r1, r2)
+            (seq_name, read_counts) = self.quantify(r1, r2)
+            self.increment_counts(seq_name, read_counts)
 
 
-    def parse_alignment(self):
+    def parse_alignment(self, aln_handle):
         """
         Parses alignment and iterates over each read while quantifying it.
         """
 
-        # TODO: Implement method to parse BAM files using mate information
-
         logger.info("Reading alignment file (path=%s).", self.bam_file)
         logger.info("Starting quantification.")
-        bam = pysam.AlignmentFile(self.bam_file, "rb")
 
         missing_refs = {}
         all_alignments_of_query_name = []
         current_query_name = None
-        for read in bam.fetch():
+        for read in aln_handle.fetch():
             # Skip alignments with following SAM flags:
             # * read fails platform/vendor quality checks (0x200)
             # * read is PCR or optical duplicate (0x400)
@@ -179,11 +208,11 @@ class Quantification:
                 if read.reference_name not in missing_refs:
                     missing_refs[read.reference_name] = 0
                 missing_refs[read.reference_name] += 1
-            # Collect all alignments with the same queryname (same read pair) 
+            # Collect all alignments with the same queryname (same read pair)
             # into chunk and process together before moving to the next read chunk
             if current_query_name is None:
                 current_query_name = read.query_name
-            
+
             if read.query_name == current_query_name:
                 all_alignments_of_query_name.append(read)
             else:
@@ -193,7 +222,7 @@ class Quantification:
         # Explicitly call the processing for the last read chunk after the loop
         if all_alignments_of_query_name:
             self.process_reads(all_alignments_of_query_name)
-            
+
         logger.info("Quantification done.")
 
         if self.interval_mode:
@@ -203,75 +232,39 @@ class Quantification:
             logger.warning("Could not find %s in reference sequence table: %s reads", seq, count)
 
 
-    def quantify(self, r1, r2):
+    def quantify(self, r1: dict, r2: dict) -> tuple:
+        """Quantify read pair r1 and r2 and increment respective count dict values.
 
-        """
-        Quantify read pair r1 and r2 and increment respective count dict values:
-          0 junc junction reads overlapping the position with at least bp_dist base pairs
-          1 span spaning pairs are read pairs of which one mate maps to the left and one to the right of reference position
-          2 anch maximal overlaping size of junction reads
-          3 a number of reads mapping to the region in the left of reference position
-          4 b number of reads mapping to the region in the right of reference position
+        Args:
+            r1 (dict): Information on Read 1 of a pair
+            r2 (dict): Information on Read 2 of a pair
 
-        if interval_mode is on the output will be as follows:
-          0 overlap_interval_end_reads reads overlapping the end of the interval with at least bp_dist base pairs
-          1 span_interval_end_pairs read pairs spanning the interval end point
-          2 within_interval reads that map completely within the interval or softjunctions
+        Returns:
+            tuple: Tuple containing the reference name and the count values
+                    for the specific read pair
         """
 
-        read_name = r1["query_name"]
-        r1_flag = r1["flag"]
-        r2_flag = r2["flag"]
-        
         seq_name = r1["reference_name"] if not r1["unmapped"] else r2["reference_name"]
 
         if seq_name not in self.seq_to_pos:
-            return
+            return seq_name, {}
 
         intervals = self.seq_to_pos[seq_name][0]
-        left_interval = intervals[0][0]
-        right_interval = intervals[1][0]
-        read_counts = None
 
-        if self.interval_mode:
-            read_counts = {}
-            for (interval_name, _, _) in intervals:
-                read_counts[interval_name] = {
-                    "junc": 0,
-                    "span": 0,
-                    "within": 0
-                }
-        else:
-            read_counts = {
-                "junc": 0,
-                "span": 0,
-                "a": 0,
-                "b": 0
-            }
-
-        r1_start = r1["start"]
-        r1_stop = r1["stop"]
-        r1_pairs = r1["pairs"]
-
-        r2_start = r2["start"]
-        r2_stop = r2["stop"]
-        r2_pairs = r2["pairs"]
-
-        r1_cigar = r1["cigar"]
-        r2_cigar = r2["cigar"]
+        #logger.info("Read: %s", read_name)
+        #logger.info("R1: %s, %s", r1_start, r1_end)
+        #logger.info(r1_pairs)
+        #logger.info("R2: %s, %s", r2_start, r2_end)
+        #logger.info(r2_pairs)
 
         # Get read information [junc, within, interval]
         r1_info = classify_read(
-            aln_start=r1_start,
-            aln_end=r1_stop,
-            aln_pairs=r1_pairs,
+            aln_pairs=r1["pairs"],
             intervals=intervals,
             bp_dist=self.bp_dist
         )
         r2_info = classify_read(
-            aln_start=r2_start,
-            aln_end=r2_stop,
-            aln_pairs=r2_pairs,
+            aln_pairs=r2["pairs"],
             intervals=intervals,
             bp_dist=self.bp_dist
         )
@@ -285,71 +278,12 @@ class Quantification:
             r1_info["class"] = "span"
             r2_info["class"] = "span"
 
+        read_counts = count_reads(
+            r1_info, r2_info, intervals, self.allow_mismatches, self.interval_mode
+        )
 
-        if r1_info["interval"]:
-            interval_name = r1_info["interval"]
-            if self.interval_mode:
-                ref_start, ref_stop = interval_name.split("_")
-                for (q, r, _) in r1_pairs:
-                    if q and r and int(ref_start) <= r < int(ref_stop):
-                        self.cov_dict[seq_name][interval_name][r] += 1
-
-            # Check if reads are junction reads
-            if r1_info["class"] == "junc":
-                if not r1_info["contains_snp_or_indel_in_bp_area"] or self.allow_mismatches:
-                    if self.interval_mode:
-                        read_counts[interval_name]["junc"] += 1
-                    else:
-                        read_counts["junc"] += 1
-
-            if r1_info["class"] in ("within", "span"):
-                if self.interval_mode:
-                    read_counts[interval_name]["within"] += 1
-                else:
-                    if interval_name == left_interval:
-                        read_counts["a"] += 1
-                    elif interval_name == right_interval:
-                        read_counts["b"] += 1
-
-
-        if r2_info["interval"]:
-            interval_name = r2_info["interval"]
-            if self.interval_mode:
-                ref_start, ref_stop = interval_name.split("_")
-                for (q, r, _) in r2_pairs:
-                    if q and r and int(ref_start) <= r < int(ref_stop):
-                        self.cov_dict[seq_name][interval_name][r] += 1
-
-
-            if r2_info["class"] == "junc":
-                if not r2_info["contains_snp_or_indel_in_bp_area"] or self.allow_mismatches:
-                    if self.interval_mode:
-                        read_counts[interval_name]["junc"] += 1
-                    else:
-                        read_counts["junc"] += 1
-
-            if r2_info["class"] in ("within", "span"):
-                if self.interval_mode:
-                    read_counts[interval_name]["within"] += 1
-                else:
-                    if interval_name == left_interval:
-                        read_counts["a"] += 1
-                    elif interval_name == right_interval:
-                        read_counts["b"] += 1
-
-
-        # Count spanning pairs individually
-        if r1_info["class"] == "span" and r2_info["class"] == "span":
-            if self.interval_mode:
-                spanning_intervals = get_spanning_intervals(
-                    intervals,
-                    r1_info["interval"],
-                    r2_info["interval"]
-                )
-                for interval_name in spanning_intervals:
-                    read_counts[interval_name]["span"] += 1
-            else:
-                read_counts["span"] += 1
+        self.update_coverage(r1["pairs"], seq_name, r1_info["interval"])
+        self.update_coverage(r2["pairs"], seq_name, r2_info["interval"])
 
         if r1["unmapped"]:
             r1_info["class"] = "unmapped"
@@ -358,16 +292,16 @@ class Quantification:
 
         bp = self.seq_to_pos[seq_name][1]
         write_line_to_file(
-            self.reads_out,
+            self.read_info_out,
             (
-                read_name,
+                r1["query_name"],
                 "R1", 
-                r1_flag,
+                r1["flag"],
                 seq_name,
                 bp,
-                r1_start,
-                r1_stop,
-                r1_cigar,
+                r1["start"],
+                r1["end"],
+                r1["cigar"],
                 r1_info["nm"],
                 r1_info["nm_in_bp_area"],
                 r1_info["class"],
@@ -375,16 +309,16 @@ class Quantification:
             )
         )
         write_line_to_file(
-            self.reads_out,
+            self.read_info_out,
             (
-                read_name,
+                r1["query_name"],
                 "R2",
-                r2_flag,
+                r2["flag"],
                 seq_name,
                 bp,
-                r2_start,
-                r2_stop,
-                r2_cigar,
+                r2["start"],
+                r2["end"],
+                r2["cigar"],
                 r2_info["nm"],
                 r2_info["nm_in_bp_area"],
                 r2_info["class"],
@@ -392,64 +326,25 @@ class Quantification:
             )
         )
 
-        return read_counts
+        return seq_name, read_counts
 
 
-    def write_results(self, seq_table_file):
+    def write_results(self) -> None:
         """
-        Write read counts to output file
+        Write read counts and read info to separate output files.
         """
 
-        plot_reads_script = os.path.join(
-            os.path.dirname(
-                os.path.abspath(__file__)), 
-            "plot_reads.py"
+        save_plot_script(
+            join_path(dirname(abspath(__file__)), "plot_reads.py"),
+            abspath(self.read_info_file),
+            abspath(self.seq_tab_file),
+            join_path(self.output_path, "quantification.pdf"),
+            join_path(self.output_path, "generate_plot.sh")
         )
-        read_info_file = os.path.abspath(self.reads_file)
-        seq_tab_file = os.path.abspath(seq_table_file)
-        plotted_reads_pdf = os.path.join(self.output_path, "quantification.pdf")
-        # Create plotting script
-        cmd = f"{plot_reads_script} -i {read_info_file} -t {seq_tab_file} -o {plotted_reads_pdf}"
-        with open(os.path.join(self.output_path, "generate_plot.sh"), "w", encoding="utf8") as outf:
-            outf.write(f"#/bin/bash\n\n{cmd}")
-
 
         logger.info("Writing results to file (path=%s).", self.quant_file)
 
-        # open output file
-        with open(self.quant_file, "w", encoding="utf8") as out_handle:
-
-            # write header line
-            sp_out = None
-            if self.interval_mode:
-                sp_out = headers.COUNTS_INT_MODE
-            else:
-                sp_out = headers.COUNTS_SINGLE_MODE
-            out_line = "\t".join(sp_out) + "\n"
-            out_handle.write(out_line)
-
-            # Iterate over sequence dictionary
-            for name, _ in self.seq_to_pos.items():
-                # get sequence counts
-                seq_counts = self.counts[name]
-
-                if self.interval_mode:
-                    for interval_name in seq_counts:
-                        # drop sequence and construct output columns
-                        sp_out = [name, interval_name] + [str(c) for c in seq_counts[interval_name]]
-
-                        # write as otput line to output file
-                        out_line = "\t".join(sp_out) + "\n"
-                        out_handle.write(out_line)
-                else:
-                    position = str(self.seq_to_pos[name][0][0][2])
-                    # drop sequence and construct output columns
-                    sp_out = [name, position] + [str(c) for c in seq_counts]
-
-                    # write as otput line to output file
-                    out_line = "\t".join(sp_out) + "\n"
-                    out_handle.write(out_line)
-
+        save_counts(self.quant_file, self.seq_to_pos, self.counts, self.interval_mode)
 
 
 def add_requantify_args(parser):

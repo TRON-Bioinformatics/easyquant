@@ -1,3 +1,6 @@
+"""
+Library for file headers.
+"""
 
 COUNTS_INT_MODE = [
     "name", 
