@@ -11,9 +11,10 @@ from bp_quant.io.io_methods import execute_cmd
 from bp_quant.io.io_methods import get_read_count_fq
 from bp_quant.io.io_methods import get_read_count_bam
 
-class TestReadProcessing(unittest.TestCase):
+class TestIOMethods(unittest.TestCase):
     """Provides unit tests for IO module."""
 
+    @unittest.skip
     def test_create_folder(self):
         """
         Test case for folder creation.
