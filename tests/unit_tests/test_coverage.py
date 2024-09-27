@@ -4,7 +4,8 @@ This module contains tests for coverage methods.
 
 import unittest
 
-from bp_quant.coverage import perc_true
+# pylint: disable=E0401
+from bp_quant.quantification.coverage import perc_true
 
 
 class TestCoverage(unittest.TestCase):

@@ -4,7 +4,6 @@ IO module to execute commands and get read counts.
 
 import logging
 import os
-import shlex
 import subprocess
 import sys
 
@@ -20,9 +19,8 @@ def create_folder(folder_path: str) -> bool:
 def execute_cmd(cmd: str, working_dir = ".") -> bool:
     """This function pushes a command into a subprocess."""
     logging.info("Executing CMD: %s", cmd)
-    # Avoid shell=True => Possibly use shlex.split()
     p = subprocess.run(
-        shlex.split(cmd),
+        cmd,
         stdout = subprocess.PIPE,
         stderr = subprocess.PIPE,
         cwd = working_dir,

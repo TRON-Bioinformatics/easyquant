@@ -7,7 +7,7 @@ from matplotlib.backends.backend_pdf import PdfPages # type: ignore
 import matplotlib.pyplot as plt # type: ignore
 from matplotlib.patches import Rectangle # type: ignore
 
-from bp_quant.seq_table import get_seq_to_pos_dict
+from bp_quant.io.seq_table import get_seq_to_pos_dict
 
 
 def parse_read_info(read_info_file: str) -> dict:

@@ -89,8 +89,15 @@ def get_read_type(bp_dist: int, anchor: int) -> str:
 
 
 def classify_read(aln_pairs: list, intervals: list, bp_dist: int) -> dict:
-    """
-    Classifies read and returns dict with information on mapping position
+    """Classifies read and returns dict with information on mapping position.
+    
+    Args:
+            aln_pairs (dict): Information on Read 1 of a pair
+            r2 (dict): Information on Read 2 of a pair
+
+        Returns:
+            tuple: Tuple containing the reference name and the count values
+                    for the specific read pair
     """
 
 
@@ -102,6 +109,9 @@ def classify_read(aln_pairs: list, intervals: list, bp_dist: int) -> dict:
         "nm_in_bp_area": 0, 
         "contains_snp_or_indel_in_bp_area": False
     }
+
+    if not aln_pairs:
+        return read_info
 
     aln_start = aln_pairs[0][1]
     aln_end = aln_pairs[-1][1] + 1
@@ -137,7 +147,7 @@ def classify_read(aln_pairs: list, intervals: list, bp_dist: int) -> dict:
             read_info["interval"] = interval_name
             return read_info
 
-    return None
+    return read_info
 
 
 def is_spanning_pair(r1_class: str, r1_interval: str, r2_class: str, r2_interval: str) -> bool:

@@ -5,10 +5,11 @@ Tests for IO module.
 import tempfile
 import unittest
 
-from bp_quant.io_methods import create_folder
-from bp_quant.io_methods import execute_cmd
-from bp_quant.io_methods import get_read_count_fq
-from bp_quant.io_methods import get_read_count_bam
+# pylint: disable=E0401
+from bp_quant.io.io_methods import create_folder
+from bp_quant.io.io_methods import execute_cmd
+from bp_quant.io.io_methods import get_read_count_fq
+from bp_quant.io.io_methods import get_read_count_bam
 
 class TestReadProcessing(unittest.TestCase):
     """Provides unit tests for IO module."""

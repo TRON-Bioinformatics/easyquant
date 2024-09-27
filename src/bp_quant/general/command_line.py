@@ -5,13 +5,14 @@ the other modules.
 
 import argparse
 
-from bp_quant.csv_to_fasta import add_csv_to_fasta_args
-from bp_quant.indexing import add_indexing_args
-from bp_quant.aligning import add_aligner_args
-from bp_quant.plot_reads import add_plot_reads_args
-from bp_quant.pipeline import add_pipeline_args
-from bp_quant.requantify import add_requantify_args
-from bp_quant.version import VERSION
+from bp_quant.io.csv_to_fasta import add_csv_to_fasta_args
+from bp_quant.indexing.generate_index import add_indexing_args
+from bp_quant.alignment.generate_alignment import add_aligner_args
+from bp_quant.plotting.plot_reads import add_plot_reads_args
+from bp_quant.general.pipeline import add_pipeline_args
+from bp_quant.general.version import VERSION
+from bp_quant.quantification.requantify import add_requantify_args
+
 
 EPILOG = "Copyright (c) 2024 TRON gGmbH (See LICENSE for licensing details)"
 

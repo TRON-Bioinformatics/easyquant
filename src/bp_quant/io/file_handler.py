@@ -2,7 +2,8 @@
 File handler module.
 """
 
-import bp_quant.file_headers as headers
+# pylint: disable=E0401
+import bp_quant.io.file_headers as headers
 
 def write_line_to_file(file_handle: object, values: list) -> bool:
     """Writes a specific line to an open file handle."""

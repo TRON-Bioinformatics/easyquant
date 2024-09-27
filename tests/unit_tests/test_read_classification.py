@@ -4,13 +4,14 @@ Tests for read classification module.
 
 import unittest
 
-from bp_quant.read_classification import calc_anchor
-from bp_quant.read_classification import check_for_indels
-from bp_quant.read_classification import classify_read
-from bp_quant.read_classification import count_mismatches_in_region
-from bp_quant.read_classification import get_match_list
-from bp_quant.read_classification import get_query_pos
-from bp_quant.read_classification import get_read_type
+# pylint: disable=E0401
+from bp_quant.quantification.read_classification import calc_anchor
+from bp_quant.quantification.read_classification import check_for_indels
+from bp_quant.quantification.read_classification import classify_read
+from bp_quant.quantification.read_classification import count_mismatches_in_region
+from bp_quant.quantification.read_classification import get_match_list
+from bp_quant.quantification.read_classification import get_query_pos
+from bp_quant.quantification.read_classification import get_read_type
 
 
 class TestReadClassification(unittest.TestCase):

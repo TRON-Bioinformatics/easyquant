@@ -5,7 +5,8 @@ Tests for read processing module.
 
 import unittest
 
-from bp_quant.read_processing import process_secondary_alignments
+# pylint: disable=E0401
+from bp_quant.quantification.read_processing import process_secondary_alignments
 
 class TestReadProcessing(unittest.TestCase):
     """Provides unit tests for read processing module."""
