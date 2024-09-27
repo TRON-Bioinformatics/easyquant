@@ -54,3 +54,19 @@ def is_singleton(read: pysam.AlignedSegment) -> bool:
         return True
     else:
         return False
+
+
+def is_valid_alignment(r1: dict, r2: dict) -> bool:
+    if (r1["unmapped"] and r2["unmapped"] or
+                    r1["query_name"] != r2["query_name"]):
+        return False
+    return True
+
+
+def is_singleton_from_read_dict(r1: dict, r2: dict) -> bool:
+    
+    if (r1["reference_name"] == r2["reference_name"] or
+        r1["unmapped"] and not r2["unmapped"] or
+        not r1["unmapped"] and r2["unmapped"]):
+        return True
+    return False

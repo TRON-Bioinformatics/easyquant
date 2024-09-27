@@ -10,10 +10,10 @@ import unittest
 # pylint: disable=E0401
 import pysam # type: ignore
 
-from bp_quant.alignment_info import get_aligner
-from bp_quant.alignment_info import get_sorting
-from bp_quant.alignment_info import is_chimeric_alignment
-from bp_quant.alignment_info import is_singleton
+from bp_quant.validation.alignment_info import get_aligner
+from bp_quant.validation.alignment_info import get_sorting
+from bp_quant.validation.alignment_info import is_chimeric_alignment
+from bp_quant.validation.alignment_info import is_singleton
 
 BAM_FILE = os.path.join("example_data", "example_rna-seq.bam")
 
@@ -21,7 +21,7 @@ class TestAlignmentInfo(unittest.TestCase):
     """Provides unit tests for IO module."""
 
     def setUp(self):
-        # TODO: Mock alignment object
+        # Set up alignment object
         self.aln_obj = pysam.AlignmentFile(BAM_FILE, "rb")
 
 

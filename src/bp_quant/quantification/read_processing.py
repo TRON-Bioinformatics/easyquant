@@ -14,8 +14,8 @@ def generate_sec_default(alns: list, i: int, ref_name: str, query_name: str, fla
             "unmapped": True,
             "flag": flag,
             "start": -1,
-            "stop": -1,
-            "pairs": None,
+            "end": -1,
+            "pairs": [],
             "cigar": None
         }
 

@@ -2,8 +2,8 @@
 This module generates the alignment commands depending on the input parameters.
 """
 
-
-import bp_quant.io_methods as IOMethods
+# pylint: disable=E0401
+import bp_quant.io.io_methods as IOMethods
 
 def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params) -> str:
     """Build up alignment command for bowtie2.

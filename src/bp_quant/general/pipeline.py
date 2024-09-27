@@ -6,8 +6,8 @@ CSV2FASTA -> Indexing -> Alignment -> Counting
 import logging
 import os
 
-import bp_quant.io_methods as IOMethods
-from bp_quant.version import VERSION
+import bp_quant.io.io_methods as IOMethods
+from bp_quant.general.version import VERSION
 
 
 
@@ -132,7 +132,7 @@ class Pipeline:
             --fq1 {self.fq1} \
             --fq2 {self.fq2} \
             --index_dir {genome_path} \
-            --output_path {align_path} \
+            --output_dir {align_path} \
             -t {num_threads} \
             -m {method} \
             {custom_params}"
@@ -140,7 +140,7 @@ class Pipeline:
             align_cmd = f"bp_quant align \
             --bam {self.bam} \
             --index_dir {genome_path} \
-            --output_path {align_path} \
+            --output_dir {align_path} \
             -t {num_threads} \
             -m {method} \
             {custom_params}"
@@ -181,8 +181,7 @@ class Pipeline:
             {skip_singleton_str}"
 
         clean_up_files_str = " ".join(clean_up_files)
-        clean_cmd = f"for file in {clean_up_files_str}; \
-            do rm -rf $file; done"
+        clean_cmd = f"rm -rf {clean_up_files_str}"
 
         # define bash script in working directory
         shell_script = os.path.join(self.working_dir, "requant.sh")

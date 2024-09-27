@@ -6,40 +6,56 @@ import logging
 from statistics import mean, median
 import sys
 
-from bp_quant.coverage import perc_true
+# pylint: disable=E0401
+from bp_quant.quantification.coverage import perc_true
 
-def init_count_dict(seq_to_pos: dict, interval_mode: bool) -> dict:
-    """Initializes count dict for further use."""
+
+def init_count_dict_interval_mode(seq_to_pos: dict) -> dict:
+    """Initializes count dict for interval mode."""
+
     counts = {}
     for seq_name in seq_to_pos:
-        if interval_mode:
-            counts[seq_name] = {}
-            for interval_name, _, _ in seq_to_pos[seq_name][0]:
-                # junc, span_read, within, coverage_%, coverage_mean, coverage_median
-                counts[seq_name][interval_name] = {
-                    "overlap_interval_end_reads": 0,
-                    "span_interval_end_pairs": 0,
-                    "within_interval": 0,
-                    "coverage_perc": 0.0,
-                    "coverage_mean": 0.0,
-                    "coverage_median": 0.0
-                }
-        else:
-            if len(seq_to_pos[seq_name]) > 2:
-                logging.error("Specified too many positions of interest \
-                    in your input file without using the interval mode!")
-                logging.error("Please check your input file or use interval mode!")
-                sys.exit(1)
-
-            counts[seq_name] = {
-                "junc": 0,
-                "span": 0,
-                "anch": 0,
-                "a": 0,
-                "b": 0
+        counts[seq_name] = {}
+        for interval_name, _, _ in seq_to_pos[seq_name][0]:
+            counts[seq_name][interval_name] = {
+                "overlap_interval_end_reads": 0,
+                "span_interval_end_pairs": 0,
+                "within_interval": 0,
+                "coverage_perc": 0.0,
+                "coverage_mean": 0.0,
+                "coverage_median": 0.0
             }
+    return counts
+
+
+def init_count_dict_regular_mode(seq_to_pos: dict) -> dict:
+    """Initializes count dict for regular mode."""
+
+    counts = {}
+    for seq_name in seq_to_pos:
+        if len(seq_to_pos[seq_name]) > 2:
+            logging.error("Specified too many positions of interest \
+                in your input file without using the interval mode!")
+            logging.error("Please check your input file or use interval mode!")
+            sys.exit(1)
+
+        counts[seq_name] = {
+            "junc": 0,
+            "span": 0,
+            "anch": 0,
+            "a": 0,
+            "b": 0
+        }
 
     return counts
+
+
+def init_count_dict(seq_to_pos: dict, interval_mode: bool) -> dict:
+    """Initializes count dict for regular mode."""
+
+    if interval_mode:
+        return init_count_dict_interval_mode(seq_to_pos)
+    return init_count_dict_regular_mode(seq_to_pos)
 
 
 def init_cov_dict(seq_to_pos: dict) -> dict:

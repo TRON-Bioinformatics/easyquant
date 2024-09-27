@@ -17,10 +17,12 @@ test_pipeline:
     - mamba env create -f environment.yml --prefix conda_env/
     - source /opt/conda/bin/activate conda_env/
     - pip install .
-    - python -m unittest tests/test_alignment_info.py
-    - python -m unittest tests/test_coverage.py
-    - python -m unittest tests/test_io_methods.py
-    - python -m unittest tests/test_read_classification.py
-    - python -m unittest tests/test_read_processing.py
-    - python -m unittest tests/test_seq_table.py
-    - bash run_test.sh
+    - python -m unittest tests/unit_tests/test_alignment_info.py
+    - python -m unittest tests/unit_tests/test_counting.py
+    - python -m unittest tests/unit_tests/test_coverage.py
+    - python -m unittest tests/unit_tests/test_io_methods.py
+    - python -m unittest tests/unit_tests/test_read_classification.py
+    - python -m unittest tests/unit_tests/test_read_processing.py
+    - python -m unittest tests/unit_tests/test_seq_table.py
+    - bash tests/integration_tests/test_bowtie2.sh
+    - bash tests/integration_tests/test_star.sh

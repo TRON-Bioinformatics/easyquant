@@ -16,16 +16,18 @@ import sys
 import pysam # type: ignore
 
 
-from bp_quant.alignment_info import get_aligner, get_sorting, is_chimeric_alignment, is_singleton
-from bp_quant.counting import init_count_dict, init_cov_dict, calc_coverage
-from bp_quant.counting import count_reads
-from bp_quant.file_handler import write_line_to_file
-from bp_quant.file_handler import save_plot_script
-from bp_quant.file_handler import save_counts
-import bp_quant.file_headers as headers
-from bp_quant.read_classification import classify_read, is_spanning_pair
-from bp_quant.read_processing import process_secondary_alignments
-from bp_quant.seq_table import get_seq_to_pos_dict
+from bp_quant.validation.alignment_info import get_aligner, get_sorting
+from bp_quant.validation.alignment_info import is_chimeric_alignment, is_singleton
+from bp_quant.validation.alignment_info import is_valid_alignment, is_singleton_from_read_dict
+from bp_quant.quantification.counting import init_count_dict, init_cov_dict, calc_coverage
+from bp_quant.quantification.counting import count_reads
+from bp_quant.io.file_handler import write_line_to_file
+from bp_quant.io.file_handler import save_plot_script
+from bp_quant.io.file_handler import save_counts
+import bp_quant.io.file_headers as headers
+from bp_quant.quantification.read_classification import classify_read, is_spanning_pair
+from bp_quant.quantification.read_processing import process_secondary_alignments
+from bp_quant.io.seq_table import get_seq_to_pos_dict
 
 
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
@@ -71,10 +73,10 @@ class Quantification:
                     self.counts[seq_name][interval_name][key] += val
         else:
             for (key, val) in read_counts.items():
-                self.counts[seq_name][key] = val
+                self.counts[seq_name][key] += val
 
 
-    def update_coverage(self, aln_pairs: list, seq_name: str, interval_name: str) -> None:
+    def update_coverage(self, aln_pairs: list, seq_name: str, intervals: list) -> None:
         """Updates the coverage dictionary with the read info.
 
         Args:
@@ -83,10 +85,11 @@ class Quantification:
             interval_name (str): Name of the interval
         """
 
-        ref_start, ref_end = interval_name.split("_")
-        for (q, r, _) in aln_pairs:
-            if q and r and int(ref_start) <= r < int(ref_end):
-                self.cov_dict[seq_name][interval_name][r] += 1
+        for (interval_name, _, _) in intervals:
+            ref_start, ref_end = interval_name.split("_")
+            for (q, r, _) in aln_pairs:
+                if q and r and int(ref_start) <= r < int(ref_end):
+                    self.cov_dict[seq_name][interval_name][r] += 1
 
 
     def process_reads(self, all_alignments_of_query_name) -> None:
@@ -121,11 +124,11 @@ class Quantification:
             unmapped = read.is_unmapped
             start = -1
             end = -1
-            pairs = None
+            pairs = []
             if not unmapped:
                 start = read.reference_start
                 end = read.reference_end
-                pairs = None
+                pairs = []
                 try:
                     pairs = read.get_aligned_pairs(with_seq=True)
                 except AttributeError:
@@ -164,16 +167,10 @@ class Quantification:
             if r1 and r2:
                 # Ignore unmapped read pairs and read pairs
                 # with unmatching reference or read name
-                if not (r1["unmapped"] and r2["unmapped"] or
-                    r1["query_name"] != r2["query_name"]):
-                    if (r1["reference_name"] == r2["reference_name"] or
-                        r1["unmapped"] and not r2["unmapped"] or
-                        not r1["unmapped"] and r2["unmapped"]):
-                        (seq_name, read_counts) = self.quantify(r1, r2)
-                        self.increment_counts(seq_name, read_counts)
-                elif r1["query_name"] != r2["query_name"]:
-                    print("MISMATCHING QUERY NAME!", r1, r2)
-                    break
+                if (is_valid_alignment(r1, r2) and
+                    is_singleton_from_read_dict(r1, r2)):
+                    (seq_name, read_counts) = self.quantify(r1, r2)
+                    self.increment_counts(seq_name, read_counts)
                 r1 = None
                 r2 = None
         # Process secondary alignments individually
@@ -282,8 +279,8 @@ class Quantification:
             r1_info, r2_info, intervals, self.allow_mismatches, self.interval_mode
         )
 
-        self.update_coverage(r1["pairs"], seq_name, r1_info["interval"])
-        self.update_coverage(r2["pairs"], seq_name, r2_info["interval"])
+        self.update_coverage(r1["pairs"], seq_name, intervals)
+        self.update_coverage(r2["pairs"], seq_name, intervals)
 
         if r1["unmapped"]:
             r1_info["class"] = "unmapped"
@@ -344,6 +341,7 @@ class Quantification:
 
         logger.info("Writing results to file (path=%s).", self.quant_file)
 
+        print(self.counts)
         save_counts(self.quant_file, self.seq_to_pos, self.counts, self.interval_mode)
 
 
