@@ -23,7 +23,7 @@ class TestReadProcessing(unittest.TestCase):
                         'flag': 355, 
                         'cigar': '100M', 
                         'start': 141, 
-                        'stop': 241, 
+                        'end': 241, 
                         'pairs': []
                     }],
                     'R2': [{
@@ -34,7 +34,7 @@ class TestReadProcessing(unittest.TestCase):
                         'flag': 403, 
                         'cigar': '100M', 
                         'start': 233, 
-                        'stop': 333, 
+                        'end': 333, 
                         'pairs': []
                     }]
                 }
@@ -50,7 +50,7 @@ class TestReadProcessing(unittest.TestCase):
                         'flag': 401, 
                         'cigar': '100M', 
                         'start': 284, 
-                        'stop': 384, 
+                        'end': 384, 
                         'pairs': []
                     }]
                 }
@@ -65,7 +65,7 @@ class TestReadProcessing(unittest.TestCase):
                         'flag': 353, 
                         'cigar': '100M', 
                         'start': 23, 
-                        'stop': 123, 
+                        'end': 123, 
                         'pairs': []
                     }],
                     'R2': []
@@ -85,7 +85,7 @@ class TestReadProcessing(unittest.TestCase):
                 'flag': 355, 
                 'cigar': '100M', 
                 'start': 141, 
-                'stop': 241, 
+                'end': 241, 
                 'pairs': []
             },
             {
@@ -96,7 +96,7 @@ class TestReadProcessing(unittest.TestCase):
                 'flag': 403,
                 'cigar': '100M',
                 'start': 233,
-                'stop': 333,
+                'end': 333,
                 'pairs': []
             }),
             ({
@@ -105,8 +105,8 @@ class TestReadProcessing(unittest.TestCase):
                 "unmapped": True,
                 "flag": 325,
                 "start": -1,
-                "stop": -1,
-                "pairs": None,
+                "end": -1,
+                "pairs": [],
                 "cigar": None
             },
             {
@@ -117,7 +117,7 @@ class TestReadProcessing(unittest.TestCase):
                 'flag': 401, 
                 'cigar': '100M', 
                 'start': 284, 
-                'stop': 384, 
+                'end': 384, 
                 'pairs': []
             }),
             ({
@@ -128,7 +128,7 @@ class TestReadProcessing(unittest.TestCase):
                 'flag': 353, 
                 'cigar': '100M', 
                 'start': 23, 
-                'stop': 123, 
+                'end': 123, 
                 'pairs': []
             },
             {
@@ -137,8 +137,8 @@ class TestReadProcessing(unittest.TestCase):
                 "unmapped": True,
                 "flag": 389,
                 "start": -1,
-                "stop": -1,
-                "pairs": None,
+                "end": -1,
+                "pairs": [],
                 "cigar": None
             })
         ]
