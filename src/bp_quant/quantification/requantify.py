@@ -341,7 +341,6 @@ class Quantification:
 
         logger.info("Writing results to file (path=%s).", self.quant_file)
 
-        print(self.counts)
         save_counts(self.quant_file, self.seq_to_pos, self.counts, self.interval_mode)
 
 
