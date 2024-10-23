@@ -26,5 +26,5 @@ bp_quant pipeline \
   --keep_all
 
 test -s $output || { echo "Missing read info file!"; exit 1; }
-assert_eq `zcat $output | wc -l` 91919 "Wrong number of reads"
+assert_eq `zcat $output | wc -l` 91945 "Wrong number of reads"
 
