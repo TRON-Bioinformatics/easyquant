@@ -236,32 +236,32 @@ def add_pipeline_args(parser):
         "-1",
         "--fq1",
         dest="fq1",
-        help="Specify path to Read 1 (R1) FASTQ file"
+        help="Path to Read 1 (R1) FASTQ file"
     )
     parser.add_argument(
         "-2",
         "--fq2",
         dest="fq2",
-        help="Specify path to Read 2 (R2) FASTQ file"
+        help="Path to Read 2 (R2) FASTQ file"
     )
     parser.add_argument(
         "-b",
         "--bam_file",
         dest="bam",
-        help="Specify path to input BAM file as alternative to FASTQ input"
+        help="Path to input BAM file as alternative to FASTQ input"
     )
     parser.add_argument(
         "-s",
         "--sequence_tab",
         dest="seq_tab",
-        help="Specify the reference sequences as table with colums name, sequence, and position",
+        help="Input sequences as table with columns: `name`, `sequence`, and `position` (tab or `;` separated).",
         required=True
     )
     parser.add_argument(
         "-o",
         "--output_folder",
         dest="output_folder",
-        help="Specify the folder to save the results into.",
+        help="Output folder to save the results into.",
         required=True
     )
     parser.add_argument(
@@ -297,7 +297,7 @@ def add_pipeline_args(parser):
         "--method",
         dest="method",
         choices=["star", "bowtie2"],
-        help="Specify alignment software to generate the index",
+        help="Alignment software to generate the index",
         default="star"
     )
     parser.add_argument(
@@ -305,13 +305,13 @@ def add_pipeline_args(parser):
         "--threads",
         dest="num_threads",
         type=int,
-        help="Specify number of threads to use for the alignment",
+        help="Number of threads to use for the alignment",
         default=1
     )
     parser.add_argument(
         "--alignment_params",
         dest="align_params",
-        help="Specify custom commandline parameters to use for the alignment",
+        help="Custom commandline parameters to use for the alignment",
         default=""
     )
     group = parser.add_mutually_exclusive_group()
