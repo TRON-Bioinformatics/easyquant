@@ -2,9 +2,7 @@
 
 *Quantification of reads at defined positions to verify custom input sequences.*
 
-Given a sequence of interest (e.g. gene fusion or splice junction) and RNA-seq raw data, 
-EasyQuant quantifies supporting reads for a given position or region of interest 
-(e.g. breakpoint, splice junction, retained intron) by reporting the number of overlapping 
+EasyQuant takes target sequence with defined positions or regions as input (e.g., breakpoints, splice junctions, retained introns) and quantifies supporting RNA-seq reads by reporting the number of overlapping 
 reads (junction reads) and read pairs spanning the position or region (spanning pairs).
 
 ## Workflow
