@@ -9,9 +9,18 @@ example_out*
 # ignore *.pyc fiels
 *.pyc
 
+# ignore __pycache__ folders
+__pycache__
+
+# ignore package temp folders
+*.egg-info
+
 *.Rproj
 
 .idea/
+.vscode/
 dist
-easy_quant.egg-info
 build
+conda_env
+
+*~
