@@ -86,7 +86,7 @@ Copyright (c) 2024 TRON gGmbH (See LICENSE for licensing details)
 
 **Note: For the quantification of splice junction sequences, we recommend performing the targeted alignment with strict parameters.**  
 
-For bowtie2 we recommend the following additional alignment parameters: `--alignment_params "--dpad 0 --gbar 99999999 --mp 1,1 --np 1 --score-min L,0,-0.01"`
+For bowtie2 we recommend the following additional alignment parameters: `--alignment_params "--no-mixed --dpad 0 --gbar 99999999 --mp 1,1 --np 1 --score-min L,0,-0.01"`
 
 For STAR we recommend the following additional alignment parameters: `--alignment_params "--outFilterMismatchNoverReadLmax 0.3 --scoreDelOpen -2 --scoreInsOpen -2 --scoreDelBase -2 --scoreInsBase -2"`
 
