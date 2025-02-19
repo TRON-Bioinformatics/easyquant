@@ -22,8 +22,7 @@ def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom
         str: command to be executed in the subprocess
     """
     cmd=""
-    if stringent_alignment:
-        custom_params = custom_params + " ".join(STRINGENT_BOWTIE_PARAMS)
+    stringent_params = " ".join(STRINGENT_BOWTIE_PARAMS) if stringent_alignment else ""
     if fq1 and fq2:
         cmd = f"bowtie2 \
             -p {num_threads} \
@@ -31,7 +30,7 @@ def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom
             -a --end-to-end --no-discordant \
             -1 {fq1} -2 {fq2} \
             -S {out_dir}/Aligned.out.sam \
-            {custom_params}"
+            {custom_params} {stringent_params}"
     elif not fq1 and not fq2 and bam:
         cmd = f"bowtie2 \
             -p {num_threads} \
@@ -40,7 +39,7 @@ def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom
             -b {bam} \
             --align-paired-reads \
             -S {out_dir}/Aligned.out.sam \
-            {custom_params}"
+            {custom_params} {stringent_params}"
     return cmd
 
 def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params, stringent_alignment) -> str:
@@ -59,8 +58,7 @@ def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_pa
         str: command to be executed in the subprocess
     """
     cmd = ""
-    if stringent_alignment:
-        custom_params = custom_params + " ".join(STRINGENT_STAR_PARAMS)
+    stringent_params = " ".join(STRINGENT_STAR_PARAMS) if stringent_alignment else ""
     if fq1 and fq2:
         cmd = f"STAR --outFileNamePrefix {out_dir}/ \
         --limitOutSAMoneReadBytes 1000000 \
@@ -74,7 +72,7 @@ def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_pa
         --outSAMunmapped Within KeepPairs \
         --outFilterScoreMinOverLread 0.3 \
         --outFilterMatchNminOverLread 0.3 \
-        {custom_params} \
+        {custom_params} {stringent_params} \
         --runThreadN {num_threads}"
     elif not fq1 and not fq2 and bam:
         cmd = f"STAR --outFileNamePrefix {out_dir}/ \
@@ -92,7 +90,7 @@ def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_pa
         --outSAMunmapped Within KeepPairs \
         --outFilterScoreMinOverLread 0.3 \
         --outFilterMatchNminOverLread 0.3 \
-        {custom_params} \
+        {custom_params} {stringent_params} \
         --runThreadN {num_threads}"
     return cmd
 
