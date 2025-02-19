@@ -4,8 +4,9 @@ This module generates the alignment commands depending on the input parameters.
 
 # pylint: disable=E0401
 import bp_quant.io.io_methods as IOMethods
+from bp_quant.alignment import STRINGENT_BOWTIE_PARAMS, STRINGENT_STAR_PARAMS
 
-def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params) -> str:
+def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params, stringent_alignment) -> str:
     """Build up alignment command for bowtie2.
 
     Args:
@@ -21,6 +22,8 @@ def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom
         str: command to be executed in the subprocess
     """
     cmd=""
+    if stringent_alignment:
+        custom_params = custom_params + " ".join(STRINGENT_BOWTIE_PARAMS)
     if fq1 and fq2:
         cmd = f"bowtie2 \
             -p {num_threads} \
@@ -40,7 +43,7 @@ def get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, num_threads, custom
             {custom_params}"
     return cmd
 
-def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params) -> str:
+def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_params, stringent_alignment) -> str:
     """Build up alignment command for STAR.
 
     Args:
@@ -56,6 +59,8 @@ def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_pa
         str: command to be executed in the subprocess
     """
     cmd = ""
+    if stringent_alignment:
+        custom_params = custom_params + " ".join(STRINGENT_STAR_PARAMS)
     if fq1 and fq2:
         cmd = f"STAR --outFileNamePrefix {out_dir}/ \
         --limitOutSAMoneReadBytes 1000000 \
@@ -92,7 +97,7 @@ def get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, num_threads, custom_pa
     return cmd
 
 
-def run(fq1, fq2, bam, index_dir, out_dir, threads, method, params):
+def run(fq1, fq2, bam, index_dir, out_dir, threads, method, params, stringent_alignment):
     """Build up and run alignment command for the specified aligner.
 
     Args:
@@ -103,18 +108,19 @@ def run(fq1, fq2, bam, index_dir, out_dir, threads, method, params):
         out_dir (str): Output directory where results are stored to
         threads (int): Number of cpus to use for processing
         params (str): Custom parameters string to add to the final command
+        params (bool): Perform targeted alignment with strict parameters
 
     Returns:
         str: command to be executed in the subprocess
     """
     cmd = None
     if method == "bowtie2":
-        cmd = get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, threads, params)
+        cmd = get_align_cmd_bowtie2(fq1, fq2, bam, index_dir, out_dir, threads, params, stringent_alignment)
     elif method == "star":
-        cmd = get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, threads, params)
-    #print(cmd)
+        cmd = get_align_cmd_star(fq1, fq2, bam, index_dir, out_dir, threads, params, stringent_alignment)
+
     IOMethods.execute_cmd(cmd)
-    #subprocess.run(cmd, shell=True, cwd=out_dir, check=None)
+
 
 def add_aligner_args(parser):
     """Add parser arguments.
@@ -176,6 +182,12 @@ def add_aligner_args(parser):
         help="Specify custom params (e.g. for STAR)",
         default=""
     )
+    parser.add_argument(
+        "-s",
+        "--stringent",
+        help="Run targeted alignment with stringent parameters",
+        action="store_true"
+    )
     parser.set_defaults(func=alignment_command)
 
 
@@ -193,5 +205,6 @@ def alignment_command(args) -> None:
         out_dir=args.output_dir,
         threads=args.threads,
         method=args.method,
-        params=args.params
+        params=args.params,
+        stringent_alignment=args.stringent
     )

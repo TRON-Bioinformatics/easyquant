@@ -18,13 +18,12 @@ def write_line_to_file(file_handle: object, values: list) -> bool:
         return False
 
 
-def save_plot_script(plot_reads_script: str, read_info_file: str,
+def save_plot_script(read_info_file: str,
                      seq_tab_file: str, plotted_reads_pdf: str,
                      plot_script: str):
     """Saves the plotting command to a shell script.
 
     Args:
-        plot_reads_script (str): Path to the python script for plotting
         read_info_file (str): Path to the read info table
         seq_tab_file (str): Path to the reference table
         plotted_reads_pdf (str): Path to the plot in PDF format
@@ -32,7 +31,7 @@ def save_plot_script(plot_reads_script: str, read_info_file: str,
     """
 
     # Create plotting script
-    cmd = f"{plot_reads_script} \
+    cmd = f"bp_quant plot \
         -i {read_info_file} \
         -t {seq_tab_file} \
         -o {plotted_reads_pdf}"

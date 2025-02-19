@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 
+logger = logging.getLogger("pipeline")
 
 def create_folder(folder_path: str) -> bool:
     """Creates folder on the filesystem if it doesn't exist."""
@@ -18,7 +19,7 @@ def create_folder(folder_path: str) -> bool:
 
 def execute_cmd(cmd: str, working_dir = ".") -> bool:
     """This function pushes a command into a subprocess."""
-    logging.info("Executing CMD: %s", cmd)
+    logger.info("Executing CMD: %s", cmd)
     p = subprocess.run(
         cmd,
         stdout = subprocess.PIPE,
@@ -28,8 +29,8 @@ def execute_cmd(cmd: str, working_dir = ".") -> bool:
         shell=True
     )
     if p.returncode != 0:
-        logging.error("Command \"%s\" returned non-zero exit status", cmd)
-        logging.error(p.stderr)
+        logger.error("Command \"%s\" returned non-zero exit status", cmd)
+        logger.error(p.stderr)
         sys.exit(1)
     return True
 
@@ -48,7 +49,6 @@ def get_read_count_fq(fq_file: str) -> int:
     with subprocess.Popen(("zcat", "-f", fq_file), stdout=subprocess.PIPE) as ps:
         result = subprocess.check_output(("wc", "-l"), stdin=ps.stdout)
         return int(int(result) / 4)
-    return 0
 
 
 def get_read_count_bam(bam_file: str) -> int:
