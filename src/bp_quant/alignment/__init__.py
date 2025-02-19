@@ -5,7 +5,7 @@ STRINGENT_BOWTIE_PARAMS = ["--no-mixed",
                            "--np", "1",
                            "--score-min", "L,0,-0.01"]
 
-STRINGENT_STAR_PARAMS = ["-outFilterMismatchNoverReadLmax", "0.3",
+STRINGENT_STAR_PARAMS = ["--outFilterMismatchNoverReadLmax", "0.3",
                          "--scoreDelOpen", "-2",
                          "--scoreInsOpen", "-2",
                          "--scoreDelBase", "-2",
