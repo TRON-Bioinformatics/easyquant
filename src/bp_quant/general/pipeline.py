@@ -56,7 +56,7 @@ class Pipeline:
         self.skip_singleton = skip_singleton
 
 
-    def run(self, method, num_threads, align_cmd_params, stringent_alignment):
+    def run(self, method, num_threads, align_cmd_params, stringent_params):
         """This function runs the pipeline on paired-end FASTQ files."""
 
         with open(os.path.join(self.working_dir, "run_command.sh"), "w", encoding="utf8") as outf:
@@ -135,7 +135,7 @@ class Pipeline:
         
         if align_cmd_params:
             custom_params = f"--params '{align_cmd_params}'"
-        if stringent_alignment:
+        if stringent_params:
             stringent_flag = "--stringent"
         
         if self.fq1 and self.fq2:
@@ -306,15 +306,16 @@ def add_pipeline_args(parser):
         help="Number of threads to use for the alignment",
         default=1
     )
-    parser.add_argument(
+    params_group = parser.add_mutually_exclusive_group()
+    params_group.add_argument(
         "--alignment_params",
         dest="align_params",
         help="Custom commandline parameters to use for the alignment",
         default=""
     )
-    parser.add_argument(
-        "--stringent_alignment",
-        dest="stringent_alignment",
+    params_group.add_argument(
+        "--stringent_params",
+        dest="stringent_params",
         help="Perform targeted alignment with stringent parameters. Exact parameters depend on aligner choice.",
         action="store_true"
     )
@@ -349,4 +350,4 @@ def pipeline_command(args):
         keep_aln=args.keep_aln,
         keep_all=args.keep_all
     )
-    pipe.run(args.method, args.num_threads, args.align_params, args.stringent_alignment)
+    pipe.run(args.method, args.num_threads, args.align_params, args.stringent_params)
