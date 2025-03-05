@@ -28,6 +28,7 @@ import bp_quant.io.file_headers as headers
 from bp_quant.quantification.read_classification import classify_read, is_spanning_pair
 from bp_quant.quantification.read_processing import process_secondary_alignments
 from bp_quant.io.seq_table import get_seq_to_pos_dict
+from bp_quant.plotting import PLOT_SCRIPT
 
 
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
@@ -336,7 +337,6 @@ class Quantification:
         """
 
         save_plot_script(
-            join_path(dirname(abspath(__file__)), "plot_reads.py"),
             abspath(self.read_info_file),
             abspath(self.seq_tab_file),
             join_path(self.output_path, "quantification.pdf"),

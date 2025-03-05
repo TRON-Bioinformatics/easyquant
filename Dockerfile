@@ -1,5 +1,4 @@
 FROM ubuntu:20.04 
-MAINTAINER johannes.hausmann@tron-mainz.de
 
 ENV SRC /usr/local/src
 ENV BIN /usr/local/bin
