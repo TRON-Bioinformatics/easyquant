@@ -41,7 +41,7 @@ bp_quant pipeline \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
-  -o example_out_csv \
+  -o example_out_csv_custom_params \
   -t 12 \
   -m star \
   --alignment_params "--outFilterMismatchNoverReadLmax 0.3 --scoreDelOpen -2 --scoreInsOpen -2 --scoreDelBase -2 --scoreInsBase -2"
@@ -64,7 +64,7 @@ bp_quant pipeline \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
-  -o example_out_csv \
+  -o example_out_csv_stringent_params \
   -t 12 \
   -m star \
   --stringent_params
