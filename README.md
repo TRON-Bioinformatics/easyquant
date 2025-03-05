@@ -53,7 +53,7 @@ pip install dist/*.whl
 
 ```
 usage: bp_quant pipeline [-h] [-1 FQ1] [-2 FQ2] [-b BAM] -s SEQ_TAB -o OUTPUT_FOLDER [-d BP_DISTANCE] [--allow_mismatches] [--interval_mode] [--skip_singleton]
-                         [-m {star,bowtie2}] [-t NUM_THREADS] [--alignment_params ALIGN_PARAMS] [--keep_aln | --keep_all]
+                         [-m {star,bowtie2}] [-t NUM_THREADS] [--alignment_params ALIGN_PARAMS | --stringent_params] [--keep_aln | --keep_all]
 
 Runs the complete bpquant pipeline
 
@@ -78,17 +78,15 @@ optional arguments:
                         Specify number of threads to use for the alignment
   --alignment_params ALIGN_PARAMS
                         Specify custom commandline parameters to use for the alignment
+  --stringent_params    Perform targeted alignment with stringent parameters. Exact parameters depend on aligner choice.
   --keep_aln            Do not delete alignment files during clean up step
   --keep_all            Do not perform clean up step after re-quantification
 
 Copyright (c) 2024 TRON gGmbH (See LICENSE for licensing details)
 ```
 
-**Note: For the quantification of splice junction sequences, we recommend performing the targeted alignment with strict parameters.**  
+**Note: For the quantification of splice junction sequences, we recommend running easyquant with `--stringent_params` parameter**  
 
-For bowtie2 we recommend the following additional alignment parameters: `--alignment_params "--dpad 0 --gbar 99999999 --mp 1,1 --np 1 --score-min L,0,-0.01"`
-
-For STAR we recommend the following additional alignment parameters: `--alignment_params "--outFilterMismatchNoverReadLmax 0.3 --scoreDelOpen -2 --scoreInsOpen -2 --scoreDelBase -2 --scoreInsBase -2"`
 
 ### Use case with example data
 

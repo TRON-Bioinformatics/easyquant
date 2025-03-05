@@ -41,7 +41,30 @@ bp_quant pipeline \
   -2 example_data/example_rna-seq_R2_001.fastq.gz \
   -s example_data/CLDN18_Context_seq.csv \
   -d 10 \
-  -o example_out_csv \
+  -o example_out_csv_custom_params \
   -t 12 \
   -m star \
   --alignment_params "--outFilterMismatchNoverReadLmax 0.3 --scoreDelOpen -2 --scoreInsOpen -2 --scoreDelBase -2 --scoreInsBase -2"
+
+#================================================================
+# Test run using comma-separated input file
+# Input data: FASTQ
+# Aligner: STAR with strict parameters
+# Interval Mode: False
+# Allow Mismatches in BP area(s): False
+# Keep temporary files: False
+#================================================================
+
+# Remove existing output folder
+rm -rf example_out_csv_stringent_params
+
+# Run pipeline
+bp_quant pipeline \
+  -1 example_data/example_rna-seq_R1_001.fastq.gz \
+  -2 example_data/example_rna-seq_R2_001.fastq.gz \
+  -s example_data/CLDN18_Context_seq.csv \
+  -d 10 \
+  -o example_out_csv_stringent_params \
+  -t 12 \
+  -m star \
+  --stringent_params

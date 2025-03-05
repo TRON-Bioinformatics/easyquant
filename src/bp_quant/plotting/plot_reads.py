@@ -3,6 +3,7 @@ This module generates a plot from the read info table.
 """
 
 # pylint: disable=E0401
+import gzip
 from matplotlib.backends.backend_pdf import PdfPages # type: ignore
 import matplotlib.pyplot as plt # type: ignore
 from matplotlib.patches import Rectangle # type: ignore
@@ -16,16 +17,16 @@ def parse_read_info(read_info_file: str) -> dict:
     """
     read_dict = {}
 
-    with open(read_info_file, encoding="utf8") as inf:
+    with gzip.open(read_info_file, encoding="utf8", mode="rt") as inf:
         next(inf)
         for line in inf:
             elements = line.rstrip().split("\t")
             read_name = elements[0]
             read_group = elements[1]
-            seq_name = elements[2]
-            start = int(elements[3])
-            stop = int(elements[4])
-            read_type = elements[6]
+            seq_name = elements[3]
+            start = int(elements[5])
+            stop = int(elements[6])
+            read_type = elements[10]
 
             if seq_name not in read_dict:
                 read_dict[seq_name] = {}
@@ -83,7 +84,7 @@ def plot(seq_to_pos: dict, read_info_file: str, output_path: str) -> None:
 
         min_start = 0
         max_stop = 0
-        for _, ref_start, ref_stop in seq_to_pos[seq_name]:
+        for _, ref_start, ref_stop in seq_to_pos[seq_name][0]:
             plt.axvline(x=ref_stop, color='grey', linewidth=1)
             min_start = min(min_start, ref_start)
             max_stop = max(max_stop, ref_stop)

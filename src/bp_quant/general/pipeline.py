@@ -10,6 +10,9 @@ import bp_quant.io.io_methods as IOMethods
 from bp_quant.general.version import VERSION
 
 
+FORMAT = '%(asctime)s - %(message)s'
+logging.basicConfig(format=FORMAT, level=logging.INFO)
+logger = logging.getLogger("pipeline")
 
 class Pipeline:
     """
@@ -23,24 +26,26 @@ class Pipeline:
         IOMethods.create_folder(self.working_dir)
 
         logfile = os.path.join(self.working_dir, 'run.log')
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s [%(levelname)s] %(message)s",
-            handlers=[
-                logging.FileHandler(logfile),
-                logging.StreamHandler()
-            ]
-        )
+        file_handler = logging.FileHandler(logfile, mode="w", encoding="utf-8")
+        logger.addHandler(file_handler)
 
+        self.fastq_pe = [False, False]
         self.fq1 = None
         self.fq2 = None
         self.bam = None
         if fq1:
             self.fq1 = os.path.abspath(fq1)
+            self.fastq_pe[0] = True
         if fq2:
             self.fq2 = os.path.abspath(fq2)
+            self.fastq_pe[1] = True
         if bam:
             self.bam = os.path.abspath(bam)
+        
+        # Perform sanity check
+        # Either foward and reverse read are present or running BAM mode
+        assert all(self.fastq_pe) or not self.bam is None, \
+            "Input error. Fastq files must be provided in pairs!"
 
         self.seq_tab = os.path.abspath(seq_tab)
         self.bp_distance = bp_distance
@@ -51,7 +56,7 @@ class Pipeline:
         self.skip_singleton = skip_singleton
 
 
-    def run(self, method, num_threads, align_cmd_params):
+    def run(self, method, num_threads, align_cmd_params, stringent_params):
         """This function runs the pipeline on paired-end FASTQ files."""
 
         with open(os.path.join(self.working_dir, "run_command.sh"), "w", encoding="utf8") as outf:
@@ -78,12 +83,12 @@ class Pipeline:
                 outf.write(align_cmd_params)
 
 
-        logging.info("Executing bpquant %s", VERSION)
+        logger.info("Executing bp-quant %s", VERSION)
         if self.fq1 and self.fq2:
-            logging.info("FQ1=%s", self.fq1)
-            logging.info("FQ2=%s", self.fq2)
+            logger.info("FQ1 = %s", self.fq1)
+            logger.info("FQ2 = %s", self.fq2)
         elif self.bam:
-            logging.info("BAM=%s", self.bam)
+            logger.info("BAM = %s", self.bam)
 
         genome_path = os.path.join(self.working_dir, "index")
         IOMethods.create_folder(genome_path)
@@ -104,7 +109,6 @@ class Pipeline:
         #create folders
         IOMethods.create_folder(align_path)
 
-
         if not os.path.exists(num_reads_file) or os.stat(num_reads_file).st_size == 0:
             with open(num_reads_file, "w", encoding="utf8") as outf:
                 if self.fq1:
@@ -112,38 +116,38 @@ class Pipeline:
                 elif self.bam:
                     outf.write(str(int(IOMethods.get_read_count(self.bam, "bam"))))
 
-        csv_to_fasta_cmd = f"bp_quant csv2fasta \
-        --input_csv {self.seq_tab} \
-        --output_fasta {fasta_file}"
+        csv_to_fasta_cmd = " ".join(
+            ["bp_quant", "csv2fasta", 
+             "--input_csv", self.seq_tab,
+             "--output_fasta", fasta_file])
 
 
-        index_cmd = f"bp_quant index \
-        --input_fasta {fasta_file} \
-        --index_dir {genome_path} \
-        -t {num_threads} \
-        --method {method}"
+        index_cmd = " ".join(
+            ["bp_quant", "index",
+             "--input_fasta", fasta_file,
+             "--index_dir", genome_path,
+             "-t", str(num_threads),
+             "--method", method])
 
         align_cmd = ""
         custom_params = ""
+        stringent_flag = ""
+        
         if align_cmd_params:
             custom_params = f"--params '{align_cmd_params}'"
+        if stringent_params:
+            stringent_flag = "--stringent"
+        
         if self.fq1 and self.fq2:
-            align_cmd = f"bp_quant align \
-            --fq1 {self.fq1} \
-            --fq2 {self.fq2} \
-            --index_dir {genome_path} \
-            --output_dir {align_path} \
-            -t {num_threads} \
-            -m {method} \
-            {custom_params}"
+            align_cmd = " ".join(
+                ["bp_quant", "align", "--fq1", self.fq1, "--fq2", self.fq2,
+                 "--index_dir", genome_path, "--output_dir", align_path,
+                 "-t", str(num_threads), "-m", method, stringent_flag, custom_params])
         elif self.bam:
-            align_cmd = f"bp_quant align \
-            --bam {self.bam} \
-            --index_dir {genome_path} \
-            --output_dir {align_path} \
-            -t {num_threads} \
-            -m {method} \
-            {custom_params}"
+            align_cmd = " ".join(
+                ["bp_quant", "align", "--bam", self.bam,
+                 "--index_dir", genome_path, "--output_dir", align_path,
+                 "-t", str(num_threads), "-m", method, stringent_flag, custom_params])
 
         if method == "star":
             clean_up_files.extend([
@@ -153,13 +157,11 @@ class Pipeline:
             ])
 
 
-        sam_to_cram_cmd = f"samtools sort \
-            -@ {num_threads} \
-            -m 2G \
-            --reference {fasta_file} \
-            -O CRAM \
-            -o {cram_file} {sam_file} \
-            && samtools index {cram_file}"
+        sam_to_cram_cmd = " ".join(
+            ["samtools", "sort", "-@", str(num_threads),
+             "-m", "2G", "--reference", fasta_file,
+             "-O", "CRAM", "-o", cram_file, sam_file,
+             "&&", "samtools", "index", cram_file])
 
         allow_mismatches_str = ""
         interval_mode_str = ""
@@ -171,14 +173,10 @@ class Pipeline:
         if self.skip_singleton:
             skip_singleton_str = " --skip_singleton"
 
-        quant_cmd = f"bp_quant count \
-            -i {sam_file} \
-            -t {self.seq_tab} \
-            -d {self.bp_distance} \
-            -o {self.working_dir}\
-            {allow_mismatches_str}\
-            {interval_mode_str}\
-            {skip_singleton_str}"
+        quant_cmd = " ".join(
+            ["bp_quant", "count", "-i", sam_file, "-t", self.seq_tab,
+             "-d", str(self.bp_distance), "-o", self.working_dir,
+            allow_mismatches_str, interval_mode_str, skip_singleton_str])
 
         clean_up_files_str = " ".join(clean_up_files)
         clean_cmd = f"rm -rf {clean_up_files_str}"
@@ -226,7 +224,7 @@ class Pipeline:
         if not self.keep_all:
             IOMethods.execute_cmd(clean_cmd)
 
-        logging.info("Processing complete for %s", self.working_dir)
+        logger.info("Processing complete for %s", self.working_dir)
 
 
 
@@ -308,11 +306,18 @@ def add_pipeline_args(parser):
         help="Number of threads to use for the alignment",
         default=1
     )
-    parser.add_argument(
+    params_group = parser.add_mutually_exclusive_group()
+    params_group.add_argument(
         "--alignment_params",
         dest="align_params",
         help="Custom commandline parameters to use for the alignment",
         default=""
+    )
+    params_group.add_argument(
+        "--stringent_params",
+        dest="stringent_params",
+        help="Perform targeted alignment with stringent parameters. Exact parameters depend on aligner choice.",
+        action="store_true"
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
@@ -345,4 +350,4 @@ def pipeline_command(args):
         keep_aln=args.keep_aln,
         keep_all=args.keep_all
     )
-    pipe.run(args.method, args.num_threads, args.align_params)
+    pipe.run(args.method, args.num_threads, args.align_params, args.stringent_params)
